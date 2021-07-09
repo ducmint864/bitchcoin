@@ -10,6 +10,12 @@
 #include <thread>
 #include <openssl/sha.h>
 
+uint16_t random2(const uint16_t &min, const uint16_t &max) //range : [min, max]
+{
+	srand(time(NULL));
+
+   	return min + rand() % (( max + 1 ) - min);
+}
 
 
 void update(float* f, float* v) 
@@ -50,16 +56,19 @@ void update(float* f, float* v)
 
 
 
-std::string calcHash(char* td, const std::string& mode = "sha256")
+std::string calcHash(std::string& td, const uint16_t& difficulty = 1, const std::string& mode = "sha256")
 {
     std::ostringstream ss;
+    uint16_t prefixCharCount = random(difficulty, difficulty*100);
 
     if (mode == "sha256")
     {
+        std::string prefix(prefixCharCount, '0');
+        prefix += td;
         unsigned char hash[SHA256_DIGEST_LENGTH];
         SHA256_CTX sha256;
         SHA256_Init(&sha256);
-        SHA256_Update(&sha256, td, strlen(td));
+        SHA256_Update(&sha256, prefix.c_str(), prefix.length());
         SHA256_Final(hash, &sha256);
 
         
@@ -75,4 +84,23 @@ std::string calcHash(char* td, const std::string& mode = "sha256")
     }
 
     return ss.str();
+}
+
+void startNodejsProgram()
+{
+    system("node assets/index.js &");
+}
+
+void guessHash(std::string& td, std::string& name, const uint16_t& difficulty, bool& finished)
+{
+    std::ofstream fileout("./arena");
+    std::string res;
+
+    while (finished == 0)
+    {
+        res = calcHash(td, difficulty);
+        fileout << res << ' ' << name << std::endl;
+    }
+
+    fileout.close();
 }
