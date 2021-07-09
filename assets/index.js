@@ -62,8 +62,9 @@ function fetch()
             Object.keys(jsonObj).forEach( (key) => {
                 let buyValue = parseInt(jsonObj[key].buy, 10);
                 let sellValue = parseInt(jsonObj[key].sell, 10);
+                let value = (buyValue + sellValue) / 2;
 
-                fs.appendFile("./values", (key.toString() + " " + buyValue.toString() + " " + sellValue.toString() + '\n'), (err) => {
+                fs.appendFile("./values", (key.toString() + " " + value.toString() + '\n'), (err) => {
                     if (err) {
                         console.log("ERROR! CAN'T WRITE VALUES TO FILE! DO YOU HAVE THE RIGHT PERMISSION?"); 
                         return;

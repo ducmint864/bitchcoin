@@ -14,9 +14,9 @@
 
 
 const uint32_t MAX_TRANSACTION_SIZE = 1048576; // 1048576 bytes - 1048576 chars (1 MB worth of transactions datas)
-const uint16_t DIFFICULTY = 10; // 10 minutes for every block
+const uint16_t DIFFICULTY = 10; // aimed at 10 minutes for every block
 const uint16_t REWARD = 6.25;
-cont
+const uint16_t TRANSACTION_FEE;
 
 
 
