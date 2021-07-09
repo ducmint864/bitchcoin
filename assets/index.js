@@ -6,8 +6,9 @@ const prompt = require('prompt-sync')({sigint : true});
 const events = require('events')
 const eventEmitter = new events.EventEmitter()
 
-console.log('\nChoose fetching interval [milisecs] | *RECOMMENDED : 30000\n')
-const milisecs = prompt(">>> ");
+// console.log('\nChoose fetching interval [milisecs] | *RECOMMENDED : 30000\n')
+// const milisecs = prompt(">>> ");
+const milisecs = 30000;
 
 
 // global vars
