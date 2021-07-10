@@ -20,7 +20,7 @@
 
 
 #define NODE_COUNT 15
-#define MAX_TRANSACTION_SIZE_IN_BYTES 32 // 1KB of transactions data
+#define MAX_TRANSACTION_SIZE_IN_BYTES 128 // 1KB of transactions data
 #define REWARD 6.25
 #define TOTAL = 21000000 
 #define clrscr() std::cout << "\e[1;1H\e[2J"
@@ -69,6 +69,8 @@ std::string whoisthewinner(std::string& correctHash)
 }
 
 
+
+
 /* IMPORTANT | DEFINE MEMBER FUNCTIONS FROM HEADER */
 
 // constructor
@@ -80,15 +82,31 @@ Block::Block(std::string& td)
     
 }
 
+
+
+
+// empty constructor
+Block::Block()
+{
+
+    logS << "Block created successfully!" << std::endl;
+
+}
+
+
 // destructor
 Block::~Block()
 {             
+
     logS << "Block freed from memory successfully!" << std::endl;
+
 }
 
 //constructor
 Blockchain::Blockchain()
 {
+    
+    syncDatabase(); // read values from database
             
     logS << "Blockchain crated successfully!" << std::endl;
 
@@ -97,14 +115,17 @@ Blockchain::Blockchain()
 //destructor
 Blockchain::~Blockchain()
 {
-    chain.clear();
+    
+    this->chain.clear();
     logS << "Blockchain deleted successfully!" << std::endl;
 
 }
 
+//methods
 void Blockchain::openCompetition(std::string& leftOut, std::vector<Node*>& nl)
 {
-    ++last_index;
+    ++last_index; // first and foremost
+
     std::unique_ptr<Block> dummyPtr(new Block(tmpTransactionsData));
     chain.push_back(std::move(dummyPtr));
     tmpTransactionsData.clear(); //reset tmpTransactionsData
@@ -136,8 +157,83 @@ void Blockchain::openCompetition(std::string& leftOut, std::vector<Node*>& nl)
     
     std::cout << "\n*Signaling miners to stop\n" << std::endl;
     std::this_thread::sleep_for(std::chrono::milliseconds(1500)); // waiting for miners to realize the competition is over 
-    FINISHED = 0; // reset the bool state for later use
+    FINISHED = 0; // reset the boolean state for later use
+
+    syncDatabase(1); // write changes to database
 }
+
+
+
+void Blockchain::syncDatabase(const uint16_t& mode)
+{
+    // mode 0 | read from database
+    if (mode == 0)
+    {
+        std::ifstream filein("./database");
+        std::string line;
+        uint64_t linecount = 1;
+        
+        while (std::getline(filein, line))
+        {
+            ++last_index;
+
+            std::unique_ptr<Block> dummyPtr(new Block());
+            this->chain.push_back(std::move(dummyPtr));
+            
+            if (linecount % 2 != 0)
+            {
+                this->chain[last_index]->correctHash = line;    
+            }
+
+            else
+            {
+                this->chain[last_index]->transactionsData = line;    
+            }
+
+            ++linecount;
+        }
+
+        filein.close();
+    }
+
+    // mode 1 | write to database
+    else if (mode == 1)
+    {
+        std::ofstream fileout("./database", std::ios::app);
+        
+        if (!fileout.is_open())
+        {
+            std::cout << "\nERROR! DO YOU HAVE THE RIGHT READ / WRITE PERMISSION FOR DATABASE" << std::endl;
+            return;
+        }
+
+        fileout << this->chain[last_index]->correctHash << std::endl << this->chain[last_index]->transactionsData << std::endl;
+        
+        fileout.close();
+    }
+
+}
+
+
+
+void Blockchain::showAllBlocks()
+{
+    
+    std::cout << "\n----------------------------------------------------------------\n";
+    
+    for (uint64_t i = 0; i < this->chain.size(); i++)
+    {
+
+        std::cout << "Block number " << i+1 << ":" << std::endl;
+        std::cout << "\t--> Hash of block : " << this->chain[i]->correctHash << std::endl;
+        std::cout << "\t--> Transactions data :\n" << this->chain[i]->transactionsData << std::endl;
+        std::cout << "----------------------------------------------------------------\n";
+
+    }
+
+}
+
+
 
 //constructor
 Node::Node(std::string& n, const float& b)
@@ -152,7 +248,7 @@ Node::~Node()
     logS << "Node deleted successfully!" << std::endl;
 }
 
-void Node::transferTo(Blockchain& blc, std::vector<Node*>& nl, std::string& receiver, float& amount)
+void Node::transferTo(Blockchain& blc, std::vector<Node*>& nl, std::string& receiver, float& amount, const uint32_t& timestamp)
 {
     if (receiver == this->name)
     {
@@ -187,7 +283,7 @@ void Node::transferTo(Blockchain& blc, std::vector<Node*>& nl, std::string& rece
     }
 
     // write to public ledger
-    std::string tmp = this->name + ' ' + receiver + ' ' + std::to_string(amount) + '\n';
+    std::string tmp = this->name + ' ' + receiver + ' ' + std::to_string(amount) + ' ' + std::to_string(timestamp) + '\n';
 
     if ( (blc.tmpTransactionsData.length() + tmp.length()) >= MAX_TRANSACTION_SIZE_IN_BYTES)
     {
@@ -207,13 +303,65 @@ void Node::startMining(std::string& td)
 }
 
 
+
+void whereOurCoinsAt(std::vector<Node*>& nl)
+{
+    std::ifstream infile("./yourCoinsAreHere");
+    if (!infile.is_open())
+    {
+        std::cout << "\n ->> ERROR! CAN'T GET ACCESS TO COINS BUCKET!" << std::endl;
+        return;
+    }
+
+    std::string line;
+    float tmp;
+    uint64_t i = 0;
+
+    while (std::getline(infile, line))
+    {
+        std::istringstream ss(line);
+        ss >> tmp;
+
+        nl[i]->balance = tmp;
+        ++i;
+    }
+
+    infile.close();
+    
+}
+
+
+
+void storeOurCoins(std::vector<Node*> &nl)
+{
+    std::ofstream outfile("./.tmpYourCoinsAreHere");
+
+    if (!outfile.is_open())
+    {
+        std::cout << "\n ->> ERROR! DO YOU HAVE PROPER READ / WRITE PERMISSION FOR THIS DIRECTORY" << std::endl;
+        return;
+    }
+
+    for (Node* &n : nl)    
+    {
+        outfile << n->balance << std::endl;
+    }
+
+    std::remove("./yourCoinsAreHere");
+    std::rename("./.tmpYourCoinsAreHere", "./yourCoinsAreHere");
+
+    outfile.close();
+}
+
+
+
 int main()
 {
     // std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // pause the main thread for 1s to wait for values to be updated;
 
     
     std::vector<Node*> nodesList; // a vector of NODES(ptr) as a method for the nodes to interact with one another
-    Blockchain chain;
+    Blockchain mychain;
     std::string tmpName;
 
     for (uint64_t i = 0; i < NODE_COUNT; i++)
@@ -242,11 +390,17 @@ int main()
         switch (option)
         {
             case 'p':
-                std::cout << "Print mode selected" << std::endl << "\nWhat to print? | (n)ame, (b)alance, transaction (f)ee, bitcoin (v)alues, (t)emporary transaction ledger\n>>> ";
+                std::cout << "Print mode selected" << std::endl << "\nWhat to print? | (n)ame, (b)alance, transaction (f)ee, (v)alues, (t)emp TD, (a)ll blocks\n>>> ";
                 scanf(" %c", &option2);
                 //
                 switch (option2)
                 {
+                    case 'a':
+                        mychain.showAllBlocks();
+                        break;
+
+                        break;
+
                     case 'n':
                         std::cout << "\n --> Current node's name : " << whoami->name << std::endl;
                         break;
@@ -265,7 +419,7 @@ int main()
                         break;
 
                     case 't':
-                        std::cout << "\n --> Current temporary ledger data : \n" << chain.tmpTransactionsData << std::endl;
+                        std::cout << "\n --> Current temporary ledger data : \n" << mychain.tmpTransactionsData << std::endl;
                         break;
 
                     default:
@@ -281,7 +435,7 @@ int main()
                 std::cin >> tmpName; std::cin.ignore();
                 std::cout << "Enter amount of bitcoin to transfer:\n>>> ";
                 std::cin >> tmpAmount; std::cin.ignore();
-                whoami->transferTo(chain, nodesList, tmpName, tmpAmount);
+                whoami->transferTo(mychain, nodesList, tmpName, tmpAmount, time(0));
 
                 //debug
                 // std::cout << "\nTemporary transaction data : " << chain.tmpTransactionsData << std::endl;
@@ -337,5 +491,11 @@ int main()
     FINISHED = 1;
     subsystem.join();
 
+    // save changes to databases
+    storeOurCoins(nodesList);   
+
     return 0;
 }
+
+
+

@@ -30,9 +30,13 @@ class Block
 
     public:
         std::string transactionsData;
+        uint32_t timestamp;
 
         // constructor
         Block(std::string& td);
+
+        //empty constructor
+        Block();
         
         // destructor
         ~Block();
@@ -58,5 +62,9 @@ class Blockchain
 
         // methods
         void openCompetition(std::string& leftOut, std::vector<Node*>& nl);
+
+        void syncDatabase(const uint16_t& mode = 0);
+
+        void showAllBlocks();
 
 }; 

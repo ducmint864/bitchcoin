@@ -72,7 +72,7 @@ std::string calcHash(std::string& td, const uint16_t& difficulty = 1, const std:
 
     if (mode == "sha256")
     {
-        std::string prefix(prefixCharCount, '0');
+        std::string prefix(prefixCharCount, ('0' + random(0, 9)) );
         prefix += td;
         unsigned char hash[SHA256_DIGEST_LENGTH];
         SHA256_CTX sha256;
