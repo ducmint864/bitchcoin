@@ -4,6 +4,7 @@
 #include <ctime>
 #include <chrono>
 #include <cstdlib>
+#include <cmath>
 #include <sstream>
 #include <string>
 #include <cstring>
@@ -18,13 +19,16 @@ uint16_t random2(const uint16_t &min, const uint16_t &max) //range : [min, max]
 }
 
 
-void update(float* f, float* v) 
+void update(float* f, float* v, const bool* b) 
 {
+    system("kitty node assets/index.js &");
+
     std::ifstream infile;
+    std::ofstream outfile;
     infile.open("assets/fee");
     std::string line, currency;
 
-    while (1)
+    while (*b == 0)
     {
         // fetch and update F
         if (!infile.is_open())
@@ -47,10 +51,15 @@ void update(float* f, float* v)
             }
         }
 
-        // wait 30 seconds before updating again
-        std::this_thread::sleep_for(std::chrono::milliseconds(30000));
+        uint16_t count = 0;
+        while (*b == 0 && count < 35000)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            ++count;
+        }
     }
-    
+
+    system("killall -q node"); // kill nodejs fetcher
     infile.close();
 }
 
@@ -59,7 +68,7 @@ void update(float* f, float* v)
 std::string calcHash(std::string& td, const uint16_t& difficulty = 1, const std::string& mode = "sha256")
 {
     std::ostringstream ss;
-    uint16_t prefixCharCount = random(difficulty, difficulty*100);
+    uint16_t prefixCharCount = random2(difficulty, pow(difficulty, 2));
 
     if (mode == "sha256")
     {
@@ -86,21 +95,46 @@ std::string calcHash(std::string& td, const uint16_t& difficulty = 1, const std:
     return ss.str();
 }
 
+
+void guessHash(std::string td, std::string name, const uint16_t difficulty, bool* finished)
+{
+    std::ofstream fileout("./arena");
+    std::string res;
+
+    while (*finished == 0)
+    {
+        fileout << calcHash(td, difficulty) << ' ' << name << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // lower interval for the judge to read correctly
+    }
+
+    fileout.close();
+}
+
+
 void startNodejsProgram()
 {
     system("node assets/index.js &");
 }
 
-void guessHash(std::string& td, std::string& name, const uint16_t& difficulty, bool& finished)
+void printAllValues()
 {
-    std::ofstream fileout("./arena");
-    std::string res;
+    std::ifstream infile("./assets/values");
 
-    while (finished == 0)
+    std::string line;
+    std::string tmp;
+    std::cout << "----------------------------------------------------------------\n";
+
+    while (std::getline(infile, line))
     {
-        res = calcHash(td, difficulty);
-        fileout << res << ' ' << name << std::endl;
-    }
+        std::istringstream ss(line);
+        ss >> tmp;
 
-    fileout.close();
+        // -> <currency> <value>\n
+        std::cout << "\t--> " << tmp << " : "; 
+        ss >> tmp;
+        std::cout << tmp << std::endl;
+    }
+    std::cout << "----------------------------------------------------------------\n";
+
+    infile.close();
 }
