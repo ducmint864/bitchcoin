@@ -24,5 +24,6 @@ class Node
 
         // methods
         void transferTo(Blockchain& blc, std::vector<Node*>& nl, std::string& receiver, float& amount, const uint32_t& timestamp);
+        
         void startMining(std::string& td);
 };
