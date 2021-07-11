@@ -20,7 +20,7 @@
 
 
 #define NODE_COUNT 15
-#define MAX_TRANSACTION_SIZE_IN_BYTES 128 // 1KB of transactions data
+#define MAX_TRANSACTION_SIZE_IN_BYTES 128 // 128Kbs of transactions data
 #define REWARD 6.25
 #define TOTAL = 21000000 
 #define clrscr() std::cout << "\e[1;1H\e[2J"
@@ -32,8 +32,6 @@ const uint16_t DIFFICULTY = 1000;
 const uint16_t INITIAL_AMOUNT = 0;
 float TRANSACTION_FEE;
 float VALUE;
-std::ifstream inputS;
-std::ofstream outputS;
 std::ofstream logS("./.log");
 bool FINISHED = 0;
 
@@ -188,6 +186,7 @@ void Blockchain::openCompetition(std::string& leftOut, std::vector<Node*>& nl)
 
 
 
+// markdown
 void Blockchain::syncDatabase(const uint16_t& mode)
 {
 
@@ -197,31 +196,43 @@ void Blockchain::syncDatabase(const uint16_t& mode)
 
         std::ifstream filein("./database");
         std::string line;
-        uint64_t linecount = 1;
+        std::string tmp1; // responsible for collecting the hash of the block
+        std::string tmp2; // responsible for collecting the transactions data of the block
         
-        while (std::getline(filein, line))
+        while (filein.peek() != EOF)
         {
-
+            
             ++last_index;
+            
+            tmp2 = ""; //reset
 
+            // create empty block first then fullfill its data later
+
+            // read in the first line, which is the hash of the block
+            std::getline(filein, line);
+            tmp1 = line;
+
+            // read in the next 3 lines, which is the transactions datas
+            std::getline(filein, line);
+            tmp2 += (line + '\n');
+
+            std::getline(filein, line);
+            tmp2 += (line + '\n');
+
+            std::getline(filein, line);
+            tmp2 += (line + '\n');
+
+            // skip the remaining blank line
+            std::getline(filein, line);
+
+            // create an empty block
             std::unique_ptr<Block> dummyPtr(new Block());
             this->chain.push_back(std::move(dummyPtr));
-            
-            if (linecount % 2 != 0)
-            {
 
-                this->chain[last_index]->correctHash = line;    
+            // fullfill datas of block
+            this->chain[last_index]->correctHash = tmp1;
+            this->chain[last_index]->transactionsData = tmp2;
 
-            }
-
-            else
-            {
-                
-                this->chain[last_index]->transactionsData = line;    
-                
-            }
-
-            ++linecount;
         }
 
         filein.close();
@@ -339,7 +350,7 @@ void Node::transferTo(Blockchain& blc, std::vector<Node*>& nl, std::string& rece
     // write to public ledger
     std::string tmp = this->name + ' ' + receiver + ' ' + std::to_string(amount) + ' ' + std::to_string(timestamp) + '\n';
 
-    if ( (blc.tmpTransactionsData.length() + tmp.length()) >= MAX_TRANSACTION_SIZE_IN_BYTES)
+    if ( (blc.tmpTransactionsData.length() + tmp.length()) > MAX_TRANSACTION_SIZE_IN_BYTES)
     {
 
         blc.openCompetition(tmp, nl);

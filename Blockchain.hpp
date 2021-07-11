@@ -35,7 +35,7 @@ class Block
         // constructor
         Block(std::string& td);
 
-        //empty constructor
+        // empty constructor
         Block();
         
         // destructor
