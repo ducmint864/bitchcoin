@@ -44,10 +44,10 @@ function fetch()
     // fetch bitcoin values
     request(valuesUrl, (err, response, body) => {
         if (err) {
-            fs.truncate("./fetcherState", 0, (err) => {});
+            fs.truncate("./assets/fetcherState", 0, (err) => {});
 
-            console.log("REQUEST TO '", valuesUrl, "' FATALLY FAILED!\n");
-            fs.appendFile("./fetcherState", "0", (err) => {
+            console.log("REQUEST TO '", valuesUrl, "' FATALLY    FAILED!\n");
+            fs.appendFile("./assets/fetcherState", "0", (err) => {
                 if (err)
                 {
                     console.log("Goddamn it!\n");
@@ -63,7 +63,7 @@ function fetch()
             console.log("REQUEST TO '", valuesUrl, "' SUCCESS!\n")
 
             // clear files everytime
-            fs.truncate("./values", 0, (err) => {
+            fs.truncate("./assets/values", 0, (err) => {
                 if (err) {
                     console.log("ERROR! CAN'T CLEAR FILE!");
                 }
@@ -78,7 +78,7 @@ function fetch()
                 let sellValue = parseInt(jsonObj[key].sell, 10);
                 let value = (buyValue + sellValue) / 2;
 
-                fs.appendFile("./values", (key.toString() + " " + value.toString() + '\n'), (err) => {
+                fs.appendFile("./assets/values", (key.toString() + " " + value.toString() + '\n'), (err) => {
                     if (err) {
                         console.log("ERROR! CAN'T WRITE VALUES TO FILE! DO YOU HAVE THE RIGHT PERMISSION?"); 
                     }
@@ -94,10 +94,10 @@ function fetch()
     // fetch bitcon transaction fee
     request(feeUrl, (err, response, body) => {
         if (err) {
-            fs.truncate("./fetcherState", 0, (err)=> {});
+            fs.truncate("./assets/fetcherState", 0, (err)=> {});
             
             console.log("REQUEST TO '", feeUrl, "' FATALLY FAILED!\n")
-            fs.appendFile("./fetcherState", "0", (err) => {
+            fs.appendFile("./assets/fetcherState", "0", (err) => {
                 if (err)
                 {
                     console.log("Goddamn it!\n");
@@ -113,7 +113,7 @@ function fetch()
             console.log("REQUEST TO '", feeUrl, "' SUCCESS!\n")
             const $ = cheerio.load(body);
             let fee = $('td[class=text-right]').html().replaceAll(' ', '').replaceAll('\n', '')
-            fs.writeFile('./fee', fee, (err) => {
+            fs.writeFile('./assets/fee', fee, (err) => {
                 if (err) {
                     console.log("ERROR! CAN'T WRITE FEE TO FILE! DO YOU HAVE THE RIGHT PERMISSION?\n") 
                     return;

@@ -419,7 +419,7 @@ bool whereOurCoinsAt(std::vector<Node*>& nl)
 void storeOurCoins(std::vector<Node*> nl)
 {
 
-    std::ofstream outfile("./.tmpYourCoinsAreHere");
+    std::ofstream outfile("./assets/.tmpYourCoinsAreHere");
 
     if (!outfile.is_open())
     {
@@ -436,8 +436,8 @@ void storeOurCoins(std::vector<Node*> nl)
         
     }
 
-    std::remove("./yourCoinsAreHere");
-    std::rename("./.tmpYourCoinsAreHere", "./yourCoinsAreHere");
+    std::remove("./assets/yourCoinsAreHere");
+    std::rename("./assets/.tmpYourCoinsAreHere", "./assets/yourCoinsAreHere");
 
     outfile.close();
 
