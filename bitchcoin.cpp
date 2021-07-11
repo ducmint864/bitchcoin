@@ -637,8 +637,6 @@ int main()
     FINISHED = 1;
     subsystem.join();
 
-    // save changes to databases
-
     return 0;
     
 }
