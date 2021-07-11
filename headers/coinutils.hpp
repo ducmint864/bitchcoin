@@ -26,15 +26,47 @@ void update(float* f, float* v, const bool* b)
 
     system("kitty node assets/index.js &");
 
-    std::ifstream infile;
-    std::ofstream outfile;
+    std::ifstream filein;
     std::string line, currency;
-    infile.open("assets/fee");
+    uint16_t count = 0, tmp;
+    bool firtTime = 1;
 
     while (*b == 0)
     {
+        if (firtTime != 1)
+        {
+
+            // check if fetcher is still working properly, if fetcherState has code 0, then the fetcher is down
+            filein.open("./assets/fetcherState");
+            if (!filein.is_open())
+            {
+
+                std::cout << "ERROR! CAN'T OPEN FILE TO READ TRANSACTION FEE!\n";
+                return;
+
+            }
+
+            filein >> tmp;
+            if (tmp == 0)
+            {
+
+                while (*b == 0 && count < 35000)
+                {
+
+                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                    count += 500;
+
+                }
+
+            }
+
+            firtTime = 0;
+            
+        }
+        
         // fetch and update F
-        if (!infile.is_open())
+        filein.open("assets/fee");
+        if (!filein.is_open())
         {
 
             std::cout << "ERROR! CAN'T OPEN FILE TO READ TRANSACTION FEE!\n";
@@ -42,12 +74,12 @@ void update(float* f, float* v, const bool* b)
 
         }
 
-        infile >> *f;
-        infile.close();
+        filein >> *f;
+        filein.close();
 
         // fetch and update V
-        infile.open("assets/values");
-        while (std::getline(infile, line))
+        filein.open("assets/values");
+        while (std::getline(filein, line))
         {
 
             std::istringstream ss(line);
@@ -61,19 +93,19 @@ void update(float* f, float* v, const bool* b)
 
         }
 
-        uint16_t count = 0;
+        count = 0;
         while (*b == 0 && count < 35000)
         {
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            ++count;
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            count+=500;
 
         }
 
     }
 
     system("killall -q node"); // kill nodejs fetcher
-    infile.close();
+    filein.close();
 
 }
 
@@ -146,13 +178,13 @@ void startNodejsProgram()
 void printAllValues()
 {
 
-    std::ifstream infile("./assets/values");
+    std::ifstream filein("./assets/values");
 
     std::string line;
     std::string tmp;
     std::cout << "----------------------------------------------------------------\n";
 
-    while (std::getline(infile, line))
+    while (std::getline(filein, line))
     {
 
         std::istringstream ss(line);
@@ -167,6 +199,6 @@ void printAllValues()
 
     std::cout << "----------------------------------------------------------------\n";
 
-    infile.close();
+    filein.close();
     
 }

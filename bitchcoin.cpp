@@ -12,10 +12,10 @@
 #include <cmath>
 #include <cstdlib>
 #include <openssl/sha.h>
-#include "timeutils.hpp"
-#include "coinutils.hpp"
-#include "./Node.hpp"
-#include "./Blockchain.hpp"
+#include "./headers/timeutils.hpp"
+#include "./headers/coinutils.hpp"
+#include "./headers/Node.hpp"
+#include "./headers/Blockchain.hpp"
 
 
 
@@ -29,7 +29,7 @@
 
 // global variables
 const uint16_t DIFFICULTY = 1000;
-const uint16_t INITIAL_AMOUNT = 0;
+const uint16_t INITIAL_AMOUNT = NODE_COUNT;
 float TRANSACTION_FEE;
 float VALUE;
 std::ofstream logS("./.log");
@@ -47,7 +47,7 @@ std::thread subsystem(update, &TRANSACTION_FEE, &VALUE, &FINISHED);
 std::string whoisthewinner(std::string& correctHash)
 {
 
-    std::ifstream infile("./arena");
+    std::ifstream infile("./assets/arena");
     std::string line, tmpHash, winner;
 
     while (std::getline(infile, line))
@@ -74,8 +74,7 @@ std::string whoisthewinner(std::string& correctHash)
 
 
 
-
-/* IMPORTANT | DEFINE MEMBER FUNCTIONS FROM HEADER */
+/* class methods */
 
 // constructor
 Block::Block(std::string& td)
@@ -194,7 +193,7 @@ void Blockchain::syncDatabase(const uint16_t& mode)
     if (mode == 0)
     {
 
-        std::ifstream filein("./database");
+        std::ifstream filein("./assets/database");
         std::string line;
         std::string tmp1; // responsible for collecting the hash of the block
         std::string tmp2; // responsible for collecting the transactions data of the block
@@ -242,7 +241,7 @@ void Blockchain::syncDatabase(const uint16_t& mode)
     else if (mode == 1)
     {
         
-        std::ofstream fileout("./database", std::ios::app);
+        std::ofstream fileout("./assets/database", std::ios::app);
         
         if (!fileout.is_open())
         {
@@ -372,18 +371,24 @@ void Node::startMining(std::string& td)
     worker.detach();
 
 }
+/* end class methods */
 
 
 
-void whereOurCoinsAt(std::vector<Node*>& nl)
+/* useful fucntions */
+
+bool whereOurCoinsAt(std::vector<Node*>& nl)
 {
 
-    std::ifstream infile("./yourCoinsAreHere");
-    if (!infile.is_open())
+    bool extremelyPoor = 1;
+    
+    std::ifstream filein;
+    filein.open("./assets/yourCoinsAreHere");
+    if (!filein.is_open())
     {
         
         std::cout << "\n ->> ERROR! CAN'T GET ACCESS TO COINS BUCKET!" << std::endl;
-        return;
+        return 0;
 
     }
 
@@ -391,24 +396,27 @@ void whereOurCoinsAt(std::vector<Node*>& nl)
     float tmp;
     uint64_t i = 0;
 
-    while (std::getline(infile, line))
-    {
+    while (std::getline(filein, line))
+    {        
+        if (extremelyPoor)
+        {
+            if (stof(line) != 0)
+                extremelyPoor = 0;
+        }
         
-        std::istringstream ss(line);
-        ss >> tmp;
-
-        nl[i]->balance = tmp;
+        nl[i]->balance = std::stof(line);
         ++i;
 
     }
 
-    infile.close();
-    
+    filein.close();   
+    return extremelyPoor;
+
 }
 
 
 
-void storeOurCoins(std::vector<Node*> &nl)
+void storeOurCoins(std::vector<Node*> nl)
 {
 
     std::ofstream outfile("./.tmpYourCoinsAreHere");
@@ -437,6 +445,44 @@ void storeOurCoins(std::vector<Node*> &nl)
 
 
 
+void checkCoinBucket(std::vector<Node*>& nl)
+{
+    std::ifstream filein;
+    std::string line;
+    filein.open("./assets/yourCoinsAreHere");
+
+    if (!filein.is_open()) 
+    {
+
+        std::cout << "ERROR! DO YOU HAVE PROPER READ / WRITE PERMISSION FOR THIS DIRECTORY?" << std::endl;
+        return;
+
+    }
+
+    if (fileIsEmpty(filein) || whereOurCoinsAt(nl) == 1) // meaning, bool extremelyPoor = 1
+    {
+        
+        std::cout << "\n->>MONEY NOT FOUND! DETECTED POVERTY INSTEAD!" << std::endl;
+        std::cout << "->>To fix poverty, I'm giving out a few coins to a random lucky person in many of you" << std::endl;
+        nl[random(0, NODE_COUNT-1)]->balance = INITIAL_AMOUNT;
+        storeOurCoins(nl); // save coins of the lucky person
+
+    }
+
+    else
+    {
+
+        std::cout << "\n->>MONEY FOUND! BE PATIENT, I'M WORKING HARD TO GIVE EVERYONE HIS / HER / THEIR BELOVED COINS BACK" << std::endl;
+
+    }
+
+    filein.close();
+
+}
+/* end useful functions */
+
+
+
 int main()
 {
     // std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // pause the main thread for 1s to wait for values to be updated;
@@ -445,17 +491,23 @@ int main()
     Blockchain mychain;
     std::string tmpName;
 
+
+    // create new nodes
     for (uint64_t i = 0; i < NODE_COUNT; i++)
     {
 
         tmpName = "node" + std::to_string(i+1);
-        Node* dummyPtr = new Node(tmpName, INITIAL_AMOUNT);
+        Node* dummyPtr = new Node(tmpName, 0);
         nodesList.push_back(dummyPtr);
 
-    }
+    }  
     
+    // quick check
+    checkCoinBucket(nodesList);
+
+    // pick a random node for the player
     Node* whoami = nodesList[random2(0, NODE_COUNT - 1)];
-    whoami->balance = 100; // give player 100 bitcons to start transferring
+    // whoami->balance = 100; // give player 100 bitcons to start transferring
 
     std::cout << "You are now controlling " << whoami->name << " | You can change if you wish to\nPress enter to continue to program...";
     std::cin.get();
@@ -465,6 +517,7 @@ int main()
     char option2;
     bool flag = 1;
 
+    // interactions
     while (flag)
     {
 
@@ -521,15 +574,14 @@ int main()
                 std::cout << "Enter amount of bitcoin to transfer:\n>>> ";
                 std::cin >> tmpAmount; std::cin.ignore();
                 whoami->transferTo(mychain, nodesList, tmpName, tmpAmount, time(0));
+                std::thread(storeOurCoins, nodesList).detach(); // dedicated thread working in background to write bitcoin records to database
 
-                //debug
-                // std::cout << "\nTemporary transaction data : " << chain.tmpTransactionsData << std::endl;
                 break;
 
-            case 'n':
-                std::cout << "Enter name of new node :\n>>> ";
-                std::cin >> tmpName; std::cin.ignore();
-                break;
+            // case 'n':
+            //     std::cout << "Enter name of new node :\n>>> ";
+            //     std::cin >> tmpName; std::cin.ignore();
+            //     break;
 
             case 's':
                 std::cout << "Enter the name of the node you want to control:\n>>> ";
@@ -586,7 +638,6 @@ int main()
     subsystem.join();
 
     // save changes to databases
-    storeOurCoins(nodesList);   
 
     return 0;
     

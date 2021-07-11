@@ -30,7 +30,7 @@ function sleep(ms) {
 function finishedHandler() {
     ++finishedCount;
     if (finishedCount == 2) {
-        console.log('\FETCH CHING AGAIN IN ', milisecs / 1000, '[secs]\n');
+        console.log('\nFETCH CHING AGAIN IN ', milisecs / 1000, '[secs]\n');
         finishedCount = 0;
     }
 }
@@ -44,14 +44,25 @@ function fetch()
     // fetch bitcoin values
     request(valuesUrl, (err, response, body) => {
         if (err) {
-            console.log("REQUEST TO '", valuesUrl, "' FATALLY FAILED!\n")
+            fs.truncate("./fetcherState", 0, (err) => {});
+
+            console.log("REQUEST TO '", valuesUrl, "' FATALLY FAILED!\n");
+            fs.appendFile("./fetcherState", "0", (err) => {
+                if (err)
+                {
+                    console.log("Goddamn it!\n");
+                    // return;
+                }
+            })
+
+            eventEmitter.emit('finished');
             return;
         }
 
         else if (!err) {
             console.log("REQUEST TO '", valuesUrl, "' SUCCESS!\n")
 
-            // clear file everytime
+            // clear files everytime
             fs.truncate("./values", 0, (err) => {
                 if (err) {
                     console.log("ERROR! CAN'T CLEAR FILE!");
@@ -70,7 +81,6 @@ function fetch()
                 fs.appendFile("./values", (key.toString() + " " + value.toString() + '\n'), (err) => {
                     if (err) {
                         console.log("ERROR! CAN'T WRITE VALUES TO FILE! DO YOU HAVE THE RIGHT PERMISSION?"); 
-                        return;
                     }
                 })
             })
@@ -84,7 +94,18 @@ function fetch()
     // fetch bitcon transaction fee
     request(feeUrl, (err, response, body) => {
         if (err) {
+            fs.truncate("./fetcherState", 0, (err)=> {});
+            
             console.log("REQUEST TO '", feeUrl, "' FATALLY FAILED!\n")
+            fs.appendFile("./fetcherState", "0", (err) => {
+                if (err)
+                {
+                    console.log("Goddamn it!\n");
+                    // return;
+                }
+            })
+
+            eventEmitter.emit('finished');
             return;
         }
 

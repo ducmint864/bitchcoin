@@ -173,6 +173,6 @@ bool fileIsEmpty(std::ifstream& iS)
 
 	iS.clear();
 	iS.seekg(0, std::ios::beg); // RESET INPUT STREAM FOR LATER USE
-
+	
 	return res;
 }
