@@ -41,12 +41,12 @@ function finishedHandler() {
 function fetch()
 {
 
-    // fetch bitcoin values
+// fetch bitcoin values
     request(valuesUrl, (err, response, body) => {
         if (err) {
             fs.truncate("./assets/fetcherState", 0, (err) => {});
 
-            console.log("REQUEST TO '", valuesUrl, "' FATALLY    FAILED!\n");
+            console.log("REQUEST TO '", valuesUrl, "' FATALLY FAILED!\n");
             fs.appendFile("./assets/fetcherState", "0", (err) => {
                 if (err)
                 {
@@ -59,6 +59,7 @@ function fetch()
             return;
         }
 
+        // request success
         else if (!err) {
             console.log("REQUEST TO '", valuesUrl, "' SUCCESS!\n")
 
@@ -76,9 +77,8 @@ function fetch()
             Object.keys(jsonObj).forEach( (key) => {
                 let buyValue = parseInt(jsonObj[key].buy, 10);
                 let sellValue = parseInt(jsonObj[key].sell, 10);
-                let value = (buyValue + sellValue) / 2;
 
-                fs.appendFile("./assets/values", (key.toString() + " " + value.toString() + '\n'), (err) => {
+                fs.appendFile("./assets/values", (key.toString() + ' ' + buyValue.toString() + ' ' + sellValue.toString() + '\n'), (err) => {
                     if (err) {
                         console.log("ERROR! CAN'T WRITE VALUES TO FILE! DO YOU HAVE THE RIGHT PERMISSION?"); 
                     }
@@ -91,7 +91,7 @@ function fetch()
     })
     //
 
-    // fetch bitcon transaction fee
+// fetch bitcon transaction fee
     request(feeUrl, (err, response, body) => {
         if (err) {
             fs.truncate("./assets/fetcherState", 0, (err)=> {});

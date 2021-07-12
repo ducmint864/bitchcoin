@@ -1,40 +1,47 @@
-const request = require('request')
-const cheerio = require('cheerio')
-const fs = require('fs')
+var https = require('https');
 
-const url = "https://ycharts.com/indicators/bitcoin_average_transaction_fee"
+function convertCurrency(amount, fromCurrency, toCurrency, cb) {
+  var apiKey = 'your-api-key-here';
 
-function test() {
-    request(url, (err, response, body) => {
-        if (err) {
-            console.log("Request failed fatally!\n")
-            return;
-        }
-        
-        // else
-        console.log("Request succeeded!\n")
+  fromCurrency = encodeURIComponent(fromCurrency);
+  toCurrency = encodeURIComponent(toCurrency);
+  var query = fromCurrency + '_' + toCurrency;
 
-        const $ = cheerio.load(body)
-        let transactionFee = $('td[class=text-right]').html().replaceAll(" ", "").replaceAll("\n", "")
+  var url = 'https://api.currconv.com/api/v7/convert?q='
+            + query + '&compact=ultra&apiKey=' + apiKey;
 
-        fs.writeFile("./fee", transactionFee, (err) => {
-            if (err) {
-                console.log("ERROR! CAN'T WRITE TO FILE! DO YOU HAVE THE RIGHT PERMISSION?\n")
-                return;
+  https.get(url, function(res){
+      var body = '';
+
+      res.on('data', function(chunk){
+          body += chunk;
+      });
+
+      res.on('end', function(){
+          try {
+            var jsonObj = JSON.parse(body);
+
+            var val = jsonObj[query];
+            if (val) {
+              var total = val * amount;
+              cb(null, Math.round(total * 100) / 100);
+            } else {
+              var err = new Error("Value not found for " + query);
+              console.log(err);
+              cb(err);
             }
-
-            console.log('WRITE SUCCEEDED!\n')
-        })        
-    })
+          } catch(e) {
+            console.log("Parse error: ", e);
+            cb(e);
+          }
+      });
+  }).on('error', function(e){
+        console.log("Got an error: ", e);
+        cb(e);
+  });
 }
 
-// main
-test()
 
-
-
-
-
-
-
-
+convertCurrency(10, 'USD', 'VND', function(err, amount) {
+  console.log(amount);
+});

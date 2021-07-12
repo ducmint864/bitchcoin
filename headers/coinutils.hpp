@@ -21,7 +21,7 @@ uint16_t random2(const uint16_t &min, const uint16_t &max) //range : [min, max]
 }
 
 
-void update(float* f, float* v, const bool* b) 
+void update(float* f, float* v, float* bv, float* sv, const bool* b) 
 {
 
     system("kitty node assets/index.js &");
@@ -87,9 +87,12 @@ void update(float* f, float* v, const bool* b)
             if (currency == "USD")
             {
                 
-                ss >> *v;
+                ss >> *bv;
+                ss >> *sv;
+                *v = (*bv + *sv) / 2;
 
             }
+
 
         }
 
@@ -183,15 +186,22 @@ void printAllValues()
     std::string line;
     std::string tmp;
     std::cout << "----------------------------------------------------------------\n";
+    std::cout << "\t--> <currency>" << ' ' << ' ' <<  "<buy value>" << ' ' << "<sell value>" << std::endl;
 
     while (std::getline(filein, line))
     {
 
         std::istringstream ss(line);
-        ss >> tmp;
 
-        // -> <currency> <value>\n
-        std::cout << "\t--> " << tmp << " : "; 
+        // <currency>
+        ss >> tmp;
+        std::cout << "\t--> " << tmp << ' ';
+
+        // <buy value>
+        ss >> tmp;
+        std::cout << tmp << ' ';
+        
+        // <sell value>
         ss >> tmp;
         std::cout << tmp << std::endl;
 

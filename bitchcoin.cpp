@@ -32,13 +32,15 @@ const uint16_t DIFFICULTY = 1000;
 const uint16_t INITIAL_AMOUNT = NODE_COUNT;
 float TRANSACTION_FEE;
 float VALUE;
+float BUY_VALUE;
+float SELL_VALUE;
 std::ofstream logS("./.log");
 bool FINISHED = 0;
 
 
 
 // determined threads to update bitcoin transaction fee and values every 30 seconds
-std::thread subsystem(update, &TRANSACTION_FEE, &VALUE, &FINISHED);
+std::thread subsystem(update, &TRANSACTION_FEE, &VALUE, &BUY_VALUE, &SELL_VALUE, &FINISHED);
 // std::thread subSystem2(startNodejsProgram);
 
 
@@ -71,6 +73,168 @@ std::string whoisthewinner(std::string& correctHash)
     return winner;
     
 }
+
+
+
+/* useful fucntions */
+
+bool whereOurCoinsAt(std::vector<Node*>& nl)
+{
+
+    bool extremelyPoor = 1;
+    
+    std::ifstream filein;
+    filein.open("./assets/yourCoinsAreHere");
+    if (!filein.is_open())
+    {
+        
+        std::cout << "\n ->> ERROR! CAN'T GET ACCESS TO COINS BUCKET!" << std::endl;
+        return 0;
+
+    }
+
+    std::string line;
+    float tmp;
+    uint64_t i = 0;
+
+    while (std::getline(filein, line))
+    {        
+        if (extremelyPoor)
+        {
+            if (stof(line) != 0)
+                extremelyPoor = 0;
+        }
+        
+        nl[i]->balance = std::stof(line);
+        ++i;
+
+    }
+
+    filein.close();   
+    return extremelyPoor;
+
+}
+
+
+
+void storeOurCoins(std::vector<Node*> nl)
+{
+
+    std::ofstream outfile("./assets/.tmpYourCoinsAreHere");
+
+    if (!outfile.is_open())
+    {
+
+        std::cout << "\n ->> ERROR! DO YOU HAVE PROPER READ / WRITE PERMISSION FOR THIS DIRECTORY" << std::endl;
+        return;
+
+    }
+
+    for (Node* &n : nl)    
+    {
+
+        outfile << n->balance << std::endl;
+        
+    }
+
+    std::remove("./assets/yourCoinsAreHere");
+    std::rename("./assets/.tmpYourCoinsAreHere", "./assets/yourCoinsAreHere");
+
+    outfile.close();
+
+}
+
+
+
+void checkCoinBucket(std::vector<Node*>& nl)
+{
+    std::ifstream filein;
+    std::string line;
+    filein.open("./assets/yourCoinsAreHere");
+
+    if (!filein.is_open()) 
+    {
+
+        std::cout << "ERROR! DO YOU HAVE PROPER READ / WRITE PERMISSION FOR THIS DIRECTORY?" << std::endl;
+        return;
+
+    }
+
+    if (fileIsEmpty(filein) || whereOurCoinsAt(nl) == 1) // meaning, bool extremelyPoor = 1
+    {
+        
+        std::cout << "\n->>MONEY NOT FOUND! DETECTED POVERTY INSTEAD!" << std::endl;
+        std::cout << "->>To fix poverty, I'm giving out a few coins to a random lucky person in many of you" << std::endl;
+        nl[random(0, NODE_COUNT-1)]->balance = INITIAL_AMOUNT;
+        storeOurCoins(nl); // save coins of the lucky person
+
+    }
+
+    else
+    {
+
+        std::cout << "\n->>MONEY FOUND! BE PATIENT, I'M WORKING HARD TO GIVE EVERYONE HIS / HER / THEIR BELOVED COINS BACK" << std::endl;
+
+    }
+
+    filein.close();
+
+}
+
+
+
+void whereOurWalletsAt(std::vector<Node*>& nl)
+{
+
+    std::ifstream filein("./assets/yourWalletsAreHere");
+    if (!filein.is_open())
+    {
+
+        std::cout << "ERROR! DO YOU HAVE PROPER READ / WRITE PERMISSION FOR THIS DIRECTORY" << std::endl;
+        return;
+
+    }
+
+    uint64_t i = 0;
+    std::string line, tmp;
+
+    while (std::getline(filein, line))
+    {
+
+        std::istringstream ss(line);
+        ss >> tmp; nl[i]->mywallet.amount = std::stod(tmp);
+        ss >> tmp; nl[i]->mywallet.currency = tmp;
+
+        ++i;
+
+    }
+
+    filein.close();
+
+}
+
+
+
+void storeOurWallets(std::vector<Node*>& nl)
+{
+
+    std::ofstream fileout("./assets/.tmpYourWalletsAreHere");
+
+    for (const auto& n : nl)
+    {
+
+        fileout << n->mywallet.amount << ' ';
+        fileout << n->mywallet.currency << std::endl;
+
+    }
+
+    std::remove("./assets/yourWalletsAreHere");
+    std::rename("./assets/.tmpYourWalletsAreHere", "./assets/yourWalletsAreHere");
+    fileout.close();
+
+}
+
+/* end useful functions */
 
 
 
@@ -185,7 +349,6 @@ void Blockchain::openCompetition(std::string& leftOut, std::vector<Node*>& nl)
 
 
 
-// markdown
 void Blockchain::syncDatabase(const uint16_t& mode)
 {
 
@@ -281,10 +444,11 @@ void Blockchain::showAllBlocks()
 
 
 //constructor
-Node::Node(std::string& n, const float& b)
+Node::Node(std::string& n, const float& b, const float& w, const std::string& curr)
 : name(n), balance(b)
 {
-
+    this->mywallet.amount = w;
+    this->mywallet.currency = curr;
     logS << "Node created successfully!" << std::endl;
 
 }
@@ -424,115 +588,107 @@ void Node::startMining(std::string& td)
     worker.detach();
 
 }
+
+
+
+void Node::withdraw(float& amount, std::string& currency, std::vector<Node*>& nl)
+{
+
+    if (this->mywallet.currency != "NULL" && currency != this->mywallet.currency)
+    {
+
+        std::cout << "\nPardon, the currency you requested does not match that in your wallet : '" << this->mywallet.currency << "'" << std::endl;
+        return;
+
+    }
+
+    if (currency == "USD")
+    {
+
+        this->mywallet.amount += (VALUE * amount); // GLOBAL VALUE DEFAULTS TO USD, AS ALWAYS
+        this->mywallet.currency = "USD";
+        this->balance -= amount;
+        storeOurWallets(nl); // saving
+        storeOurCoins(nl); // saving
+
+        return;
+
+    }
+    
+    std::ifstream filein("./assets/values");
+    if (!filein.is_open())
+    {
+        std::cout << "ERROR! DO YOU HAVE PROPER READ / WRITE PERMISSION FOR THIS DIRECTORY" << std::endl;
+        return;
+    }
+    
+    bool found = 0;
+    double denominator;
+    std::string line, tmp;
+
+    while (std::getline(filein, line))
+    {
+
+        std::istringstream ss(line);
+        ss >> tmp;
+
+        if (tmp == currency)
+        {
+
+            found = 1;
+
+            ss >> tmp;
+            denominator = std::stod(tmp);
+
+            // withdraw money into node's wallet
+            this->mywallet.amount += (denominator * amount);
+            this->mywallet.currency = currency;
+            this->balance -= amount;
+            storeOurWallets(nl); // saving
+            storeOurCoins(nl); // saving
+            
+            break;
+
+        }
+
+    }
+
+    if (!found)
+    {
+
+        char option;
+        std::cout << "Pardon, we don't have that kind of currency here! | Please consider your local bank instead\nNote that this can be temporary depening on different periods of the day, you can come back later to give it one more try\nDo you want to withdraw the money as USD instead?\n >>>";
+        std::cin >> option; std::cin.ignore();
+
+        if (option == 'Y' || option == 'y')
+        {
+
+            this->mywallet.amount += (VALUE * amount); // GLOBAL VALUE DEFAULTS TO USD, AS ALWAYS
+            this->mywallet.currency = "USD";
+            this->balance -= amount;
+            storeOurWallets(nl); // saving
+            storeOurCoins(nl); // saving
+
+            return;
+
+        }
+
+        else
+        {
+
+            std::cout << "\nUnderstandable! Have a great day! Abort withdraw operation!" << std::endl;
+            return;
+
+        }
+
+    }
+
+
+}
+
 /* end class methods */
 
 
-
-/* useful fucntions */
-
-bool whereOurCoinsAt(std::vector<Node*>& nl)
-{
-
-    bool extremelyPoor = 1;
-    
-    std::ifstream filein;
-    filein.open("./assets/yourCoinsAreHere");
-    if (!filein.is_open())
-    {
-        
-        std::cout << "\n ->> ERROR! CAN'T GET ACCESS TO COINS BUCKET!" << std::endl;
-        return 0;
-
-    }
-
-    std::string line;
-    float tmp;
-    uint64_t i = 0;
-
-    while (std::getline(filein, line))
-    {        
-        if (extremelyPoor)
-        {
-            if (stof(line) != 0)
-                extremelyPoor = 0;
-        }
-        
-        nl[i]->balance = std::stof(line);
-        ++i;
-
-    }
-
-    filein.close();   
-    return extremelyPoor;
-
-}
-
-
-
-void storeOurCoins(std::vector<Node*> nl)
-{
-
-    std::ofstream outfile("./assets/.tmpYourCoinsAreHere");
-
-    if (!outfile.is_open())
-    {
-
-        std::cout << "\n ->> ERROR! DO YOU HAVE PROPER READ / WRITE PERMISSION FOR THIS DIRECTORY" << std::endl;
-        return;
-
-    }
-
-    for (Node* &n : nl)    
-    {
-
-        outfile << n->balance << std::endl;
-        
-    }
-
-    std::remove("./assets/yourCoinsAreHere");
-    std::rename("./assets/.tmpYourCoinsAreHere", "./assets/yourCoinsAreHere");
-
-    outfile.close();
-
-}
-
-
-
-void checkCoinBucket(std::vector<Node*>& nl)
-{
-    std::ifstream filein;
-    std::string line;
-    filein.open("./assets/yourCoinsAreHere");
-
-    if (!filein.is_open()) 
-    {
-
-        std::cout << "ERROR! DO YOU HAVE PROPER READ / WRITE PERMISSION FOR THIS DIRECTORY?" << std::endl;
-        return;
-
-    }
-
-    if (fileIsEmpty(filein) || whereOurCoinsAt(nl) == 1) // meaning, bool extremelyPoor = 1
-    {
-        
-        std::cout << "\n->>MONEY NOT FOUND! DETECTED POVERTY INSTEAD!" << std::endl;
-        std::cout << "->>To fix poverty, I'm giving out a few coins to a random lucky person in many of you" << std::endl;
-        nl[random(0, NODE_COUNT-1)]->balance = INITIAL_AMOUNT;
-        storeOurCoins(nl); // save coins of the lucky person
-
-    }
-
-    else
-    {
-
-        std::cout << "\n->>MONEY FOUND! BE PATIENT, I'M WORKING HARD TO GIVE EVERYONE HIS / HER / THEIR BELOVED COINS BACK" << std::endl;
-
-    }
-
-    filein.close();
-
-}
-/* end useful functions */
 
 
 
@@ -550,13 +706,14 @@ int main()
     {
 
         tmpName = "node" + std::to_string(i+1);
-        Node* dummyPtr = new Node(tmpName, 0);
+        Node* dummyPtr = new Node(tmpName, 0, 0, "NULL");
         nodesList.push_back(dummyPtr);
 
     }  
     
-    // quick check
+    // restore saved values
     checkCoinBucket(nodesList);
+    whereOurWalletsAt(nodesList);
 
     // pick a random node for the player
     Node* whoami = nodesList[random2(0, NODE_COUNT - 1)];
@@ -568,6 +725,7 @@ int main()
 
     char option;
     char option2;
+    std::string tmpC;
     bool flag = 1;
 
     // interactions
@@ -581,7 +739,7 @@ int main()
         {
 
             case 'p':
-                std::cout << "Print mode selected" << std::endl << "\nWhat to print? | (n)ame, (b)alance, transaction (f)ee, (v)alues, (t)emp TD, (a)ll blocks\n>>> ";
+                std::cout << "Print mode selected" << std::endl << "\nWhat to print? | (n)ame, (b)alance, transaction (f)ee, (v)alues, (t)emp TD, (a)ll blocks, (w)allet\n>>> ";
                 scanf(" %c", &option2);
 
                 //
@@ -613,9 +771,14 @@ int main()
                         std::cout << "\n --> Current temporary ledger data : \n" << mychain.tmpTransactionsData << std::endl;
                         break;
 
+                    case 'w':
+                        std::cout << "\n --> You have " << whoami->mywallet.amount << " [" << whoami->mywallet.currency << ']' << std::endl;
+                        break;
+
                     default:
                         std::cout << "\n --> Inavlid option : " << option2 << std::endl;
                         break;
+
                 } 
                 //
                 break;
@@ -629,11 +792,13 @@ int main()
 
                 break;
 
-            // case 'n':
-            //     std::cout << "Enter name of new node :\n>>> ";
-            //     std::cin >> tmpName; std::cin.ignore();
-            //     break;
+            case 'w':                
+                std::cout << "Enter in format amount(bitcoins)__currency you want to withdraw? | eg : 69_USD\n>>> ";
+                std::cin >> tmpAmount >> tmpC;
 
+                whoami->withdraw(tmpAmount, tmpC, nodesList);
+                break;
+             
             case 's':
                 std::cout << "Enter the name of the node you want to control:\n>>> ";
                 std::cin >> tmpName; std::cin.ignore();
