@@ -6,8 +6,12 @@
     #define Node_H
 #endif
 
+
+
 class Block;
 class Blockchain;
+class Stall;
+class Marketplace;
 
 
 
@@ -28,6 +32,7 @@ class Node
         std::string name;
         float balance;
         wallet mywallet;
+        Stall* mystall;
 
         // constructor
         Node(std::string& n, const float& b, const float& w, const std::string& curr);
@@ -41,5 +46,9 @@ class Node
         void startMining(std::string& td);
 
         void withdraw(float& amount, std::string& currency, std::vector<Node*>& nl); // amount -> amount of bitcoins
+
+        void openMyStall(Marketplace& mp, Node* &s, bool& t, double& a);
+
+        void closeMyStall(Marketplace& mp);
 
 };

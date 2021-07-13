@@ -5,17 +5,20 @@
 #include <sstream>
 #include <fstream>
 #include <vector>
+#include <iterator>
 #include <memory>
 #include <thread>
 #include <chrono>
 #include <ctime>
 #include <cmath>
+#include <algorithm>
 #include <cstdlib>
 #include <openssl/sha.h>
 #include "./headers/timeutils.hpp"
 #include "./headers/coinutils.hpp"
 #include "./headers/Node.hpp"
 #include "./headers/Blockchain.hpp"
+#include "./headers/Marketplace.hpp"
 
 
 
@@ -238,6 +241,21 @@ void storeOurWallets(std::vector<Node*>& nl)
 
 
 
+/* by creating this struct, we will treat each trade between 2 traders as an <Exchange> object */
+struct Exchange
+{
+
+    Node*& seller;   // both seller and buyer are traders | referrence to pointers as well
+    Node*& buyer;    // ,just to be explicitly clear
+
+    double exchangeThis; // could be bitcoins / money
+    double forThis;      // in exchange of money / bitcoins
+
+}; typedef struct Exchange Exchange;
+/* end struct definition*/
+
+
+
 /* class methods */
 
 // constructor
@@ -290,6 +308,52 @@ Blockchain::~Blockchain()
     
     this->chain.clear();
     logS << "Blockchain deleted successfully!" << std::endl;
+
+}
+
+
+
+// constructor
+Stall::Stall(Node* &s, bool& t, double& a)
+: seller(s), type(t), amount(a)
+{
+
+    logS << "Stall object created sucessfully!" << std::endl;
+
+}
+
+
+
+// destructor
+Stall::~Stall()
+{
+
+    this->complete = 0;
+    logS << "Stall obj deleted successfully!" << std::endl;
+
+}
+
+
+
+// constructor
+Marketplace::Marketplace()
+{
+
+    logS << "Marketplace created successfully!" << std::endl;
+
+}
+
+
+
+// destructor
+Marketplace::~Marketplace()
+{
+
+    for (const auto& s : market)    
+        delete s;
+    
+    this->market.clear();
+    logS << "Marketplace deleted successfully created" << std::endl;
 
 }
 
@@ -686,9 +750,62 @@ void Node::withdraw(float& amount, std::string& currency, std::vector<Node*>& nl
 
 }
 
+
+
+void Node::openMyStall(Marketplace& mp, Node*& s, bool& t, double& a)
+{
+
+    this->mystall = new Stall(s, t, a);
+    mp.market.push_back(std::move(mystall));
+    (t == 0) ? s->balance -= a : s->mywallet.amount -= a;
+    
+    std::cout << "\nOpened a lovely stall in the marketplace. Yours is stall number " << mp.market.size() << std::endl;
+
+}
+
+
+
+void Node::closeMyStall(Marketplace& mp)
+{
+
+    // using lambda function with std::find_if() to find stall
+    std::vector<Stall*>::iterator iter = std::find_if(mp.market.begin(), mp.market.end(), 
+    [this](const Stall* s) { return (s->seller->name == this->name); }
+    );
+
+    // delete stall from market
+    mp.market.erase(iter);
+
+}
+
+
+
+void Marketplace::showAllStalls()
+{
+
+    uint64_t i = 0;
+    std::string tmp;
+    
+    std::cout << "----------------------------------------------------------------\n";
+    for (Stall*& s : market)
+    {
+
+        std::cout << "stall number " << i + 1 << " : " << std::endl;
+        std::cout << "\t--> seller : " << s->seller->name << std::endl;
+
+        tmp = (s->type == 0) ? "bitcoins for money" : "money for bitcoins";
+        std::cout << "\t--> type : " << tmp << std::endl;
+
+        std::cout << "\t--> amount : " << s->amount << std::endl;
+        std::cout << "----------------------------------------------------------------\n";
+
+        ++i;
+
+    }
+
+};
+
 /* end class methods */
-
-
 
 
 
@@ -696,10 +813,21 @@ int main()
 {
     // std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // pause the main thread for 1s to wait for values to be updated;
    
-    std::vector<Node*> nodesList; // a vector of NODES(ptr) as a method for the nodes to interact with one another
-    Blockchain mychain;
-    std::string tmpName;
+    std::vector<Node*> nodesList; // a vector of <NODE> as a method for the nodes to interact with one another
+    std::vector<Exchange*> market; // a vector of <Exchange*> as a marketplace for nodes who need to trade bitcoins WITHOUT KNOWING WHO THE BUYER / SELLER is yet
+    Blockchain mychain;             // a unique | one-and-only <Blockchain> object of the whole program and is the life of it (kind of)
+    Marketplace mymarketplace;       // a unique | one-and-only <Marketplace> object of the whole program
 
+    char option;              // these 2 vars are for 
+    char option2;             // storing user's input queries
+    
+    std::string tmpC;        // 5 vars are for later use in the while loop 
+    std::string tmpName;     // as temporary 
+    float tmpAmount;         // input values
+    double tmpAmount2;      //
+    short tmpCount = 0;
+
+    bool flag = 1; // flag to stop the while loop when the user query is 'q'
 
     // create new nodes
     for (uint64_t i = 0; i < NODE_COUNT; i++)
@@ -711,7 +839,7 @@ int main()
 
     }  
     
-    // restore saved values
+    // restore saved values from previous runtime
     checkCoinBucket(nodesList);
     whereOurWalletsAt(nodesList);
 
@@ -723,16 +851,12 @@ int main()
     std::cin.get();
     clrscr();
 
-    char option;
-    char option2;
-    std::string tmpC;
-    bool flag = 1;
 
     // interactions
     while (flag)
     {
 
-        std::cout << "Queries | (t)ransfer, (n)ew node, (s)witch node, (q)uit" << std::endl;
+        std::cout << "Queries | (t)ransfer, (n)ew node, (s)witch node, enter (m)arketplace, (q)uit" << std::endl;
         scanf(" %c", &option);
 
         switch (option)
@@ -780,15 +904,55 @@ int main()
                         break;
 
                 } 
-                //
+                
                 break;
 
             case 't':
-                float tmpAmount;
                 std::cout << "Enter the name of the receiver:\n>>> ";
                 std::cin >> tmpName; std::cin.ignore();
                 whoami->transferTo(mychain, nodesList, tmpName, time(0));
                 std::thread(storeOurCoins, nodesList).detach(); // dedicated thread working in background to write bitcoin records to database
+
+                break;
+
+            case 'm':
+                while (1) // use loop so that player doesn't get out of marketplace after action
+                {
+                    std::string greet = (tmpCount == 0) ? "Welcome to the marketplace! | Do you intend to (s)ell, (b)uy, (v)iew all stalls, or (l)eave?\n>>>" : "\n| Do you intend to (s)ell, (b)uy, (v)iew all stalls?, or (l)eave\n>>> ";
+                    std::cout << greet;
+                    std::cin >> option2;
+
+                    // if (option2 == 'b' || option2 == 'B')
+                    // {
+
+                    //     whoami->
+
+                    // }
+
+                    if (option2 == 's' || option2 == 'S')
+                    {
+                        bool tmp;
+                        std::cout << "\nWill you (0) sell bitcoins for money of (1) sell money for bitcoins?\n>>> ";
+                        std::cin >> tmp; std::cin.ignore();
+                        std::cout << "\nEnter amount :\n>>> ";
+                        std::cin >> tmpAmount2; std::cin.ignore();
+                        whoami->openMyStall(mymarketplace, whoami, tmp, tmpAmount2);
+
+                    }
+
+                    else if (option2 == 'v' || option2 == 'V')
+                        mymarketplace.showAllStalls();
+
+                    else if (option2 == 'l')
+                        break;
+
+                    else
+                        std::cout << "Invalid option : " << option2 << std::endl;
+
+
+                    tmpCount = 1; // avoid node entering marketplace so many times that it crash the program
+                }
+                tmpCount = 0; //reset
 
                 break;
 
@@ -822,6 +986,7 @@ int main()
                     } 
 
                 }                
+
                 break;
 
             case 'q':
@@ -842,10 +1007,10 @@ int main()
     }
 
     // memory cleaning
-    for (Node* &nPtr : nodesList)
+    for (Node* &node : nodesList)
     {
 
-        delete nPtr;
+        delete node;
 
     } nodesList.clear();
 
