@@ -42,8 +42,10 @@ bool isLeap(long year, bool isLeapFlag)
 	
 	if ((year - 1972) % 4 == 0 || year == 1972)
 	{
+		
 		return true;
 		isLeapFlag = true;
+
 	}
 
 	return false;
@@ -60,13 +62,9 @@ std::string getYear()
 	while (seconds < ts)
 	{
 		if (isLeap(year++, isLeapFlag))
-		{
 			seconds += 31536000;
-		}
 		else
-		{
 			seconds += 31622400;
-		}
 	}
 	year-=1;
 	
@@ -90,8 +88,10 @@ std::string getMonth()
 
 	while (dummy > 0 && i < 12)
 	{
+
 		dummy -= secondsOfMonths[i];	
 		++month;	
+
 	}
 
 	return std::to_string(month);
@@ -156,9 +156,11 @@ std::ifstream& gotoLine(std::ifstream& file, unsigned long long num)
 
 uint64_t random(const uint64_t &min, const uint64_t &max) //range : [min, max]
 {
+
 	srand(time(NULL));
 
    	return min + rand() % (( max + 1 ) - min);
+
 }
 
 
@@ -166,6 +168,7 @@ uint64_t random(const uint64_t &min, const uint64_t &max) //range : [min, max]
 
 bool fileIsEmpty(std::ifstream& iS)
 {
+
 	bool res;
 	iS.seekg(0, std::ios::end);
 
@@ -175,4 +178,5 @@ bool fileIsEmpty(std::ifstream& iS)
 	iS.seekg(0, std::ios::beg); // RESET INPUT STREAM FOR LATER USE
 	
 	return res;
+
 }

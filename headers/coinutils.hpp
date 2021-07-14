@@ -35,6 +35,7 @@ void update(float* f, float* v, float* bv, float* sv, const bool* b)
 
     while (*b == 0)
     {
+
         if (firtTime != 1)
         {
 
@@ -157,6 +158,7 @@ std::string calcHash(std::string& td, const uint16_t& difficulty = 1, const std:
 
 void guessHash(std::string td, std::string name, const uint16_t difficulty, bool* finished)
 {
+    
     std::ofstream fileout("./assets/arena");
     std::string res;
 
