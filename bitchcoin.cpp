@@ -305,7 +305,7 @@ Blockchain::~Blockchain()
 {
     
     this->chain.clear();
-    logS << "Blockchain deleted successfully!" << std::endl;
+    logS << "Blockchain freed from memory successfully!" << std::endl;
 
 }
 
@@ -350,7 +350,7 @@ Marketplace::~Marketplace()
         delete s;
     
     this->market.clear();
-    logS << "Marketplace deleted successfully created" << std::endl;
+    logS << "Marketplace deleted successfully" << std::endl;
 
 }
 
@@ -689,13 +689,30 @@ void Node::openMyStall(Marketplace& mp, Node*& s, bool& t, double& a)
 void Node::closeMyStall(Marketplace& mp)
 {
 
-    // using lambda function with std::find_if() to find stall
+    // if node doesn't even have a stall
+    if (this->mystall == nullptr)
+    {
+
+        std::cout << "\nYou don't own a stall, maybe you used to!" << std::endl;
+        return;
+
+    }
+
+    // using lambda function with std::find_if() to find position of this node's stall in the market
     std::vector<Stall*>::iterator iter = std::find_if(mp.market.begin(), mp.market.end(), 
     [this](const Stall* s) { return (s->seller->name == this->name); }
     );
 
+    // delete stall's data from memory
+    auto index = (iter - mp.market.begin()); // get index of found stall in market
+    delete mp.market[index];
+    mp.market[index] = nullptr;
+
     // delete stall from market
     mp.market.erase(iter);
+
+    // finally
+    std::cout << "\n--> Stall closed successfully!" << std::endl;
 
 }
 
@@ -728,10 +745,10 @@ void Node::visitStall(Blockchain& blc, std::vector<Node*>& nl, Marketplace& mp, 
     }
 
     // first and foremost, show stall info
-    std::cout << "stall number " << i + 1 << " : " << std::endl;
+    std::cout << "stall number " << stallNum << " : " << std::endl;
     std::cout << "\t--> seller : " << mp.market[index]->seller->name << std::endl;
 
-    std::string tmp = (mp.market[index] == 0) ? "bitcoins for money" : "[USD] for bitcoins";
+    std::string tmp = (mp.market[index]->type == 0) ? " in exchange of money" : "[USD] in exchange of bitcoins";
     std::cout << "\t--> selling : " << mp.market[index]->amount << tmp << std::endl;
 
     std::cout << "----------------------------------------------------------------\n";
@@ -793,7 +810,11 @@ void Node::visitStall(Blockchain& blc, std::vector<Node*>& nl, Marketplace& mp, 
 
         }
 
+        
         mp.market[index]->seller->closeMyStall(mp); // force the stall owner to close stall as trade complete; 
+        storeOurCoins(nl);        // saving
+        storeOurWallets(nl);     // saving
+
         std::cout << "\n--> Trading complete! Have a great day!" << std::endl;
         return;
 
@@ -831,7 +852,7 @@ void Marketplace::showAllStalls()
         std::cout << "stall number " << i + 1 << " : " << std::endl;
         std::cout << "\t--> seller : " << s->seller->name << std::endl;
 
-        tmp = (s->type == 0) ? " bitcoins for money" : "[USD] for bitcoins";
+        tmp = (s->type == 0) ? " bitcoins in exchange of money" : "[USD] in exchange of bitcoins";
         std::cout << "\t--> selling : " << s->amount << tmp << std::endl;
 
         std::cout << "----------------------------------------------------------------\n";
@@ -894,7 +915,7 @@ int main()
     while (flag)
     {
 
-        std::cout << "Queries | (t)ransfer, (n)ew node, (s)witch node, enter (m)arketplace, (q)uit" << std::endl;
+        std::cout << "Queries | (t)ransfer, (n)ew node, (s)witch node, enter (m)arketplace, (q)uit\n>>> ";
         scanf(" %c", &option);
 
         switch (option)
@@ -956,14 +977,14 @@ int main()
             case 'm':
                 while (1) // use loop so that player doesn't get out of marketplace after action
                 {
-                    std::string greet = (tmpCount == 0) ? "Welcome to the marketplace! | Do you intend to (s)ell, (b)uy, (v)iew all stalls, or (l)eave?\n>>> " : "\n| Do you intend to (s)ell, (b)uy, (v)iew all stalls?, or (l)eave\n>>> ";
+                    std::string greet = (tmpCount == 0) ? "\nWelcome to the marketplace! | Do you intend to (s)ell, (b)uy, (v)iew all stalls, (c)lose your stall, or (l)eave?\n>>> " : "\nDo you intend to (s)ell, (b)uy, (v)iew all stalls?, (c)lose your stall, or (l)eave\n>>> ";
                     std::cout << greet;
-                    std::cin >> option2;
 
+                    std::cin >> option2; std::cin.ignore();
                     if (option2 == 's' || option2 == 'S')
                     {
                         bool tmp;
-                        std::cout << "\nWill you (0) sell bitcoins for money of (1) sell money for bitcoins?\n>>> ";
+                        std::cout << "\nWill you (0) sell bitcoins in exchange of money of (1) sell money in exchange of bitcoins?\n>>> ";
                         std::cin >> tmp; std::cin.ignore();
                         std::cout << "\nEnter amount :\n>>> ";
                         std::cin >> tmpAmount2; std::cin.ignore();
@@ -986,14 +1007,9 @@ int main()
                         mymarketplace.showAllStalls();
 
                     else if (option2 == 'c' || option2 == 'C')
-                    {
-
                         whoami->closeMyStall(mymarketplace);
-                        std::cout << "\n--> Stall closed successfully!" << std::endl;
 
-                    }
-
-                    else if (option2 == 'l')
+                    else if (option2 == 'l' || option2 == 'L' || option2 == 'q' || option2 == 'Q')
                         break;
 
                     else
