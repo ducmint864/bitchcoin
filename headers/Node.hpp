@@ -51,4 +51,6 @@ class Node
 
         void closeMyStall(Marketplace& mp);
 
+        void visitStall(Blockchain& blc, std::vector<Node*>& nl, Marketplace& mp, uint64_t& stallNum);
+
 };

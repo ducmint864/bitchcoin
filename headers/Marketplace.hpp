@@ -26,12 +26,10 @@ class Stall
 {
     public:
         Node* seller;
-        Node* buyer;
 
         double amount; // <double> amount of bitcoins/money to sell
 
         bool type;     // whether = 0 (selling bitcoins for money) / 1 (selling money for bitcoins)
-        bool complete; // the flag that indicate whether the stall's trading is completed
 
     // contructor
     Stall(Node* &s, bool& t, double& a);

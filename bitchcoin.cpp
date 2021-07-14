@@ -326,7 +326,6 @@ Stall::Stall(Node* &s, bool& t, double& a)
 Stall::~Stall()
 {
 
-    this->complete = 0;
     logS << "Stall obj deleted successfully!" << std::endl;
 
 }
@@ -507,7 +506,7 @@ void Blockchain::showAllBlocks()
 
 //constructor
 Node::Node(std::string& n, const float& b, const double& w, const std::string& curr)
-: name(n), balance(b), wallet(w)
+: name(n), balance(b), wallet(w), mystall(NULL)
 {
 
     logS << "Node created successfully!" << std::endl;
@@ -654,73 +653,12 @@ void Node::startMining(std::string& td)
 
 void Node::withdraw(float& amount, std::vector<Node*>& nl)
 {
-    
-    std::ifstream filein("./assets/values");
-    if (!filein.is_open())
-    {
-        std::cout << "ERROR! DO YOU HAVE PROPER READ / WRITE PERMISSION FOR THIS DIRECTORY" << std::endl;
-        return;
-    }
-    
-    bool found = 0;
-    double denominator;
-    std::string line, tmp;
 
-    while (std::getline(filein, line))
-    {
-
-        std::istringstream ss(line);
-        ss >> tmp;
-
-        if (tmp == "USD")
-        {
-
-            found = 1;
-
-            ss >> tmp;
-            denominator = std::stod(tmp);
-
-            // withdraw money into node's wallet
-            this->wallet += (denominator * amount);
-            this->balance -= amount;
-            storeOurWallets(nl); // saving
-            storeOurCoins(nl); // saving
-            
-            break;
-
-        }
-
-    }
-
-    if (!found)
-    {
-
-        char option;
-        std::cout << "Pardon, we don't have that kind of currency here! | Please consider your local bank instead\nNote that this can be temporary depening on different periods of the day, you can come back later to give it one more try\nDo you want to withdraw the money as USD instead?\n >>>";
-        std::cin >> option; std::cin.ignore();
-
-        if (option == 'Y' || option == 'y')
-        {
-
-            this->wallet += (VALUE * amount); // GLOBAL VALUE DEFAULTS TO USD, AS ALWAYS
-            this->balance -= amount;
-            storeOurWallets(nl); // saving
-            storeOurCoins(nl); // saving
-
-            return;
-
-        }
-
-        else
-        {
-
-            std::cout << "\nUnderstandable! Have a great day! Abort withdraw operation!" << std::endl;
-            return;
-
-        }
-
-    }
-
+    // withdraw money into node's wallet
+    this->wallet += (VALUE * amount);
+    this->balance -= amount;
+    storeOurWallets(nl); // saving
+    storeOurCoins(nl); // saving        
 
 }
 
@@ -728,6 +666,15 @@ void Node::withdraw(float& amount, std::vector<Node*>& nl)
 
 void Node::openMyStall(Marketplace& mp, Node*& s, bool& t, double& a)
 {
+    
+    // each node can only open at most one stall at a time
+    if (this->mystall != nullptr)
+    {
+
+        std::cout << "Pardon, marketplace rule number 1 : first and foremost, you can't own and operate more than a single stall at the same time | Close the current stall first" << std::endl;
+        return;
+        
+    }
 
     this->mystall = new Stall(s, t, a);
     mp.market.push_back(std::move(mystall));
@@ -754,6 +701,123 @@ void Node::closeMyStall(Marketplace& mp)
 
 
 
+// visit to view stall, negotiate, make offers, and perform trades, or perhaps just leave the stall
+void Node::visitStall(Blockchain& blc, std::vector<Node*>& nl, Marketplace& mp, uint64_t& stallNum)
+{
+
+    // initial checking to see if stall exist
+    if (stallNum > mp.market.size())
+    {
+
+        std::cout << "\nStall doesn't exist! Might have bene deleted not long ago!" << std::endl;
+        return;
+
+    }
+
+    uint64_t index = stallNum - 1;
+    char option;
+
+
+    // sellers can't perform  trading with themself
+    if (mp.market[index]->seller->name == this->name)
+    {
+
+        std::cout << "You can't trade with yourself you fishing prick!" << std::endl;
+        return;
+
+    }
+
+    // first and foremost, show stall info
+    std::cout << "stall number " << i + 1 << " : " << std::endl;
+    std::cout << "\t--> seller : " << mp.market[index]->seller->name << std::endl;
+
+    std::string tmp = (mp.market[index] == 0) ? "bitcoins for money" : "[USD] for bitcoins";
+    std::cout << "\t--> selling : " << mp.market[index]->amount << tmp << std::endl;
+
+    std::cout << "----------------------------------------------------------------\n";
+
+    // decide whether to take the deal or leave
+    std::cout << "seller (" << mp.market[index]->seller->name <<") : '(c)rop or (d)rop buddy?'\n>>> ";
+    std::cin >> option; std::cin.ignore();
+
+    if (option == 'c' || option == 'C')
+    {
+        
+        #define focusedStall mp.market[index] // alias to save writing time
+    
+        // 0: sell bitcoins for money | 1: sell money for bitcoins
+        if (focusedStall->type == 0)
+        {
+
+            focusedStall->seller->balance -= focusedStall->amount;
+            focusedStall->seller->wallet += (focusedStall->amount * SELL_VALUE);
+
+            this->balance += focusedStall->amount;
+            this->wallet -= (focusedStall->amount * BUY_VALUE);
+            
+            // data to be written to public ledger, trading is technically trasnfering
+            // <from> <to> <amount>
+            tmp = focusedStall->seller->name + ' ' + this->name + ' ' + std::to_string(focusedStall->amount) + ' ' + std::to_string(time(0)) + '\n';
+
+        }
+
+        else
+        {
+
+            double excess = fmod(focusedStall->seller->wallet, BUY_VALUE); // left-over money
+            float tradableBitcoins = (focusedStall->amount / BUY_VALUE);
+
+            focusedStall->seller->wallet -= (focusedStall->amount - excess);
+            focusedStall->seller->balance += (tradableBitcoins);
+
+            this->wallet += ( (focusedStall->amount / SELL_VALUE) * SELL_VALUE);
+            this->balance -= tradableBitcoins;
+
+            // data to be written to public ledger, trading is technically trasnfering
+            // <from> <to> <amount>
+            tmp =  this->name + ' ' + focusedStall->seller->name + ' ' + std::to_string(focusedStall->amount) + ' ' + std::to_string(time(0)) + '\n';
+        }
+
+        //write to public ledger, trading is technically trasnfering
+        if ( (blc.tmpTransactionsData.length() + tmp.length()) > MAX_TRANSACTION_SIZE_IN_BYTES)
+        {
+
+            blc.openCompetition(tmp, nl);
+
+        }
+
+        else
+        {
+
+            blc.tmpTransactionsData += tmp;
+
+        }
+
+        mp.market[index]->seller->closeMyStall(mp); // force the stall owner to close stall as trade complete; 
+        std::cout << "\n--> Trading complete! Have a great day!" << std::endl;
+        return;
+
+    }
+
+    else if (option == 'd' || option == 'D')
+    {
+
+        std::cout << "\n-->Understandable, have a great day!" << std::endl;
+        return;
+
+    }
+
+    else 
+    {
+        std::cout << "Option invalid : " << option << std::endl;
+        return;
+    }
+
+
+}
+
+
+
 void Marketplace::showAllStalls()
 {
 
@@ -767,10 +831,9 @@ void Marketplace::showAllStalls()
         std::cout << "stall number " << i + 1 << " : " << std::endl;
         std::cout << "\t--> seller : " << s->seller->name << std::endl;
 
-        tmp = (s->type == 0) ? "bitcoins for money" : "money for bitcoins";
-        std::cout << "\t--> type : " << tmp << std::endl;
+        tmp = (s->type == 0) ? " bitcoins for money" : "[USD] for bitcoins";
+        std::cout << "\t--> selling : " << s->amount << tmp << std::endl;
 
-        std::cout << "\t--> amount : " << s->amount << std::endl;
         std::cout << "----------------------------------------------------------------\n";
 
         ++i;
@@ -796,10 +859,11 @@ int main()
     char option2;             // storing user's input queries
     
         
-    std::string tmpName;      // these 4 vars are for later use in the while loop  as temporary 
+    std::string tmpName;      // these 5 vars are for later use in the while loop  as temporary 
     float tmpAmount;         // input values
     double tmpAmount2;      //
-    short tmpCount = 0;    //
+    uint64_t tmpAmount3;   //
+    short tmpCount = 0;   //
 
     bool flag = 1; // flag to stop the while loop when the user query is 'q'
 
@@ -892,16 +956,9 @@ int main()
             case 'm':
                 while (1) // use loop so that player doesn't get out of marketplace after action
                 {
-                    std::string greet = (tmpCount == 0) ? "Welcome to the marketplace! | Do you intend to (s)ell, (b)uy, (v)iew all stalls, or (l)eave?\n>>>" : "\n| Do you intend to (s)ell, (b)uy, (v)iew all stalls?, or (l)eave\n>>> ";
+                    std::string greet = (tmpCount == 0) ? "Welcome to the marketplace! | Do you intend to (s)ell, (b)uy, (v)iew all stalls, or (l)eave?\n>>> " : "\n| Do you intend to (s)ell, (b)uy, (v)iew all stalls?, or (l)eave\n>>> ";
                     std::cout << greet;
                     std::cin >> option2;
-
-                    // if (option2 == 'b' || option2 == 'B')
-                    // {
-
-                    //     whoami->
-
-                    // }
 
                     if (option2 == 's' || option2 == 'S')
                     {
@@ -914,8 +971,27 @@ int main()
 
                     }
 
+                    else if (option2 == 'b' || option2 == 'B')
+                    {
+
+                        std::cout << "Awesome! These stalls are currently available for trading :\n";
+                        mymarketplace.showAllStalls();
+                        std::cout << "\nWhich one seems appealing to you? | Enter stall's number to visit stall\n>>> ";
+                        std::cin >> tmpAmount3; std::cin.ignore();
+                        whoami->visitStall(mychain, nodesList, mymarketplace, tmpAmount3);
+
+                    }
+
                     else if (option2 == 'v' || option2 == 'V')
                         mymarketplace.showAllStalls();
+
+                    else if (option2 == 'c' || option2 == 'C')
+                    {
+
+                        whoami->closeMyStall(mymarketplace);
+                        std::cout << "\n--> Stall closed successfully!" << std::endl;
+
+                    }
 
                     else if (option2 == 'l')
                         break;
