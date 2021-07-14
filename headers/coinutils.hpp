@@ -11,6 +11,8 @@
 #include <thread>
 #include <openssl/sha.h>
 
+
+
 uint16_t random2(const uint16_t &min, const uint16_t &max) //range : [min, max]
 {
 

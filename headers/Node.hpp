@@ -15,13 +15,13 @@ class Marketplace;
 
 
 
-struct wallet
-{
+// struct wallet
+// {
 
-    double amount;
-    std::string currency;
+//     double amount;
+//     std::string currency;
 
-}; typedef struct wallet wallet;
+// }; typedef struct wallet wallet;
 
 
 
@@ -31,11 +31,11 @@ class Node
     public:
         std::string name;
         float balance;
-        wallet mywallet;
+        double wallet;
         Stall* mystall;
 
         // constructor
-        Node(std::string& n, const float& b, const float& w, const std::string& curr);
+        Node(std::string& n, const float& b, const double& w, const std::string& curr);
 
         // destructor
         ~Node();
@@ -45,7 +45,7 @@ class Node
         
         void startMining(std::string& td);
 
-        void withdraw(float& amount, std::string& currency, std::vector<Node*>& nl); // amount -> amount of bitcoins
+        void withdraw(float& amount, std::vector<Node*>& nl); // amount -> amount of bitcoins
 
         void openMyStall(Marketplace& mp, Node* &s, bool& t, double& a);
 

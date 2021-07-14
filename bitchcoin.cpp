@@ -205,8 +205,7 @@ void whereOurWalletsAt(std::vector<Node*>& nl)
     {
 
         std::istringstream ss(line);
-        ss >> tmp; nl[i]->mywallet.amount = std::stod(tmp);
-        ss >> tmp; nl[i]->mywallet.currency = tmp;
+        ss >> tmp; nl[i]->wallet = std::stod(tmp);
 
         ++i;
 
@@ -226,8 +225,7 @@ void storeOurWallets(std::vector<Node*>& nl)
     for (const auto& n : nl)
     {
 
-        fileout << n->mywallet.amount << ' ';
-        fileout << n->mywallet.currency << std::endl;
+        fileout << n->wallet << std::endl;
 
     }
 
@@ -508,11 +506,10 @@ void Blockchain::showAllBlocks()
 
 
 //constructor
-Node::Node(std::string& n, const float& b, const float& w, const std::string& curr)
-: name(n), balance(b)
+Node::Node(std::string& n, const float& b, const double& w, const std::string& curr)
+: name(n), balance(b), wallet(w)
 {
-    this->mywallet.amount = w;
-    this->mywallet.currency = curr;
+
     logS << "Node created successfully!" << std::endl;
 
 }
@@ -655,29 +652,8 @@ void Node::startMining(std::string& td)
 
 
 
-void Node::withdraw(float& amount, std::string& currency, std::vector<Node*>& nl)
+void Node::withdraw(float& amount, std::vector<Node*>& nl)
 {
-
-    if (this->mywallet.currency != "NULL" && currency != this->mywallet.currency)
-    {
-
-        std::cout << "\nPardon, the currency you requested does not match that in your wallet : '" << this->mywallet.currency << "'" << std::endl;
-        return;
-
-    }
-
-    if (currency == "USD")
-    {
-
-        this->mywallet.amount += (VALUE * amount); // GLOBAL VALUE DEFAULTS TO USD, AS ALWAYS
-        this->mywallet.currency = "USD";
-        this->balance -= amount;
-        storeOurWallets(nl); // saving
-        storeOurCoins(nl); // saving
-
-        return;
-
-    }
     
     std::ifstream filein("./assets/values");
     if (!filein.is_open())
@@ -696,7 +672,7 @@ void Node::withdraw(float& amount, std::string& currency, std::vector<Node*>& nl
         std::istringstream ss(line);
         ss >> tmp;
 
-        if (tmp == currency)
+        if (tmp == "USD")
         {
 
             found = 1;
@@ -705,8 +681,7 @@ void Node::withdraw(float& amount, std::string& currency, std::vector<Node*>& nl
             denominator = std::stod(tmp);
 
             // withdraw money into node's wallet
-            this->mywallet.amount += (denominator * amount);
-            this->mywallet.currency = currency;
+            this->wallet += (denominator * amount);
             this->balance -= amount;
             storeOurWallets(nl); // saving
             storeOurCoins(nl); // saving
@@ -727,8 +702,7 @@ void Node::withdraw(float& amount, std::string& currency, std::vector<Node*>& nl
         if (option == 'Y' || option == 'y')
         {
 
-            this->mywallet.amount += (VALUE * amount); // GLOBAL VALUE DEFAULTS TO USD, AS ALWAYS
-            this->mywallet.currency = "USD";
+            this->wallet += (VALUE * amount); // GLOBAL VALUE DEFAULTS TO USD, AS ALWAYS
             this->balance -= amount;
             storeOurWallets(nl); // saving
             storeOurCoins(nl); // saving
@@ -757,7 +731,7 @@ void Node::openMyStall(Marketplace& mp, Node*& s, bool& t, double& a)
 
     this->mystall = new Stall(s, t, a);
     mp.market.push_back(std::move(mystall));
-    (t == 0) ? s->balance -= a : s->mywallet.amount -= a;
+    (t == 0) ? s->balance -= a : s->wallet -= a;
     
     std::cout << "\nOpened a lovely stall in the marketplace. Yours is stall number " << mp.market.size() << std::endl;
 
@@ -821,11 +795,11 @@ int main()
     char option;              // these 2 vars are for 
     char option2;             // storing user's input queries
     
-    std::string tmpC;        // 5 vars are for later use in the while loop 
-    std::string tmpName;     // as temporary 
+        
+    std::string tmpName;      // these 4 vars are for later use in the while loop  as temporary 
     float tmpAmount;         // input values
     double tmpAmount2;      //
-    short tmpCount = 0;
+    short tmpCount = 0;    //
 
     bool flag = 1; // flag to stop the while loop when the user query is 'q'
 
@@ -896,7 +870,7 @@ int main()
                         break;
 
                     case 'w':
-                        std::cout << "\n --> You have " << whoami->mywallet.amount << " [" << whoami->mywallet.currency << ']' << std::endl;
+                        std::cout << "\n --> You have " << whoami->wallet << "[USD]" << std::endl;
                         break;
 
                     default:
@@ -957,10 +931,10 @@ int main()
                 break;
 
             case 'w':                
-                std::cout << "Enter in format amount(bitcoins)__currency you want to withdraw? | eg : 69_USD\n>>> ";
-                std::cin >> tmpAmount >> tmpC;
+                std::cout << "Enter in amount of bitcoins you want to withdraw?\n>>> ";
+                std::cin >> tmpAmount;
 
-                whoami->withdraw(tmpAmount, tmpC, nodesList);
+                whoami->withdraw(tmpAmount, nodesList);
                 break;
              
             case 's':
