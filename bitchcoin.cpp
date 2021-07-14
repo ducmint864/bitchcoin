@@ -772,7 +772,7 @@ void Node::visitStall(Blockchain& blc, std::vector<Node*>& nl, Marketplace& mp, 
             this->balance += focusedStall->amount;
             this->wallet -= (focusedStall->amount * BUY_VALUE);
             
-            // data to be written to public ledger, trading is technically trasnfering
+            // data to be written to public ledger, trading is technically transferring
             // <from> <to> <amount>
             tmp = focusedStall->seller->name + ' ' + this->name + ' ' + std::to_string(focusedStall->amount) + ' ' + std::to_string(time(0)) + '\n';
 
