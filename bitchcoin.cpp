@@ -348,6 +348,7 @@ void Blockchain::openCompetition(std::string& leftOut, std::vector<Node*>& nl)
 
     std::unique_ptr<Block> dummyPtr(new Block(tmpTransactionsData));
     chain.push_back(std::move(dummyPtr));
+	chain.shrink_to_fit(); // shrink the capacity of vector to its true size to avoid wasting memory
     tmpTransactionsData.clear(); //reset tmpTransactionsData
     tmpTransactionsData += leftOut;
 
@@ -435,6 +436,7 @@ void Blockchain::syncDatabase(const uint16_t& mode)
             // create an empty block
             std::unique_ptr<Block> dummyPtr(new Block());
             this->chain.push_back(std::move(dummyPtr));
+			chain.shrink_to_fit(); // shrink the capacity of vector to its true size to avoid wasting memory
 
             // fullfill datas of block
             this->chain[last_index]->correctHash = tmp1;
@@ -662,6 +664,7 @@ void Node::openMyStall(Marketplace& mp, Node*& s, bool& t, double& a)
 
     this->mystall = new Stall(s, t, a);
     mp.market.push_back(std::move(mystall));
+	mp.market.shrink_to_fit(); // shrink the capacity of vector to its true size to avoid wasting memory
     (t == 0) ? s->balance -= a : s->wallet -= a;
     
     std::cout << "\nOpened a lovely stall in the marketplace. Yours is stall number " << mp.market.size() << std::endl;
@@ -878,6 +881,7 @@ int main()
         tmpName = "node" + std::to_string(i+1);
         Node* dummyPtr = new Node(tmpName, 0, 0, "NULL");
         nodesList.push_back(dummyPtr);
+		nodesList.shrink_to_fit(); // shrink vector's capacity to its true size to avoid wasting memory
 
     }  
     
@@ -898,7 +902,7 @@ int main()
     while (flag)
     {
 
-        std::cout << "Queries | (t)ransfer, (n)ew node, (s)witch node, enter (m)arketplace, (q)uit\n>>> ";
+        std::cout << "Queries | (t)ransfer), (s)witch node, enter (m)arketplace, (q)uit\n>>> ";
         scanf(" %c", &option);
 
         switch (option)
