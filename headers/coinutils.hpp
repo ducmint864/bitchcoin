@@ -117,7 +117,7 @@ void update(float* f, float* v, float* bv, float* sv, const bool* b)
 
 
 
-std::string calcHash(std::string& td, const uint16_t& difficulty = 1, const std::string& mode = "sha256")
+std::string calcHash(std::string& td, std::string& ph, const uint16_t& difficulty = 1, const std::string& mode = "sha256")
 {
 
     std::ostringstream ss;
@@ -127,7 +127,7 @@ std::string calcHash(std::string& td, const uint16_t& difficulty = 1, const std:
     {
 
         std::string prefix(prefixCharCount, ('0' + random(0, 9)) );
-        prefix += td;
+        prefix += (td + ph);
         unsigned char hash[SHA256_DIGEST_LENGTH];
         SHA256_CTX sha256;
         SHA256_Init(&sha256);
@@ -156,7 +156,7 @@ std::string calcHash(std::string& td, const uint16_t& difficulty = 1, const std:
 }
 
 
-void guessHash(std::string td, std::string name, const uint16_t difficulty, bool* finished)
+void guessHash(std::string td, std::string ph, std::string name, const uint16_t difficulty, bool* finished)
 {
     
     std::ofstream fileout("./assets/arena");
@@ -165,7 +165,7 @@ void guessHash(std::string td, std::string name, const uint16_t difficulty, bool
     while (*finished == 0)
     {
 
-        fileout << calcHash(td, difficulty) << ' ' << name << std::endl;
+        fileout << calcHash(td, ph, difficulty) << ' ' << name << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // lower interval for the judge to read correctly
 
     }

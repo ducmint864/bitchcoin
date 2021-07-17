@@ -27,13 +27,14 @@ class Block
 
     private:
         std::string correctHash;
+        std::string prevHash; // hash of previous block in blockchain
 
     public:
         std::string transactionsData;
         uint32_t timestamp;
 
         // constructor
-        Block(std::string& td);
+        Block(std::string& td, std::string& ph); // ph - previousHash
 
         // empty constructor
         Block();
@@ -52,7 +53,7 @@ class Blockchain
     public:
         std::vector<std::unique_ptr<Block>> chain;
         std::string tmpTransactionsData;
-        uint64_t last_index = -1;
+        uint64_t current_index = -1;
 
         // constructor
         Blockchain ();

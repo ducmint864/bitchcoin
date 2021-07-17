@@ -32,6 +32,8 @@
 // global variables
 const uint16_t DIFFICULTY = 1000;
 const uint16_t INITIAL_AMOUNT = NODE_COUNT;
+const std::string HASH_OF_DEATH = "0000000000000000000000000000000000000000000000000000000000000000";
+
 float TRANSACTION_FEE;
 float VALUE;
 float BUY_VALUE;
@@ -43,7 +45,6 @@ bool FINISHED = 0;
 
 // determined threads to update bitcoin transaction fee and values every 30 seconds
 std::thread subsystem(update, &TRANSACTION_FEE, &VALUE, &BUY_VALUE, &SELL_VALUE, &FINISHED);
-// std::thread subSystem2(startNodejsProgram);
 
 
 
@@ -241,11 +242,11 @@ void storeOurWallets(std::vector<Node*>& nl)
 /* class methods */
 
 // constructor
-Block::Block(std::string& td)
-: transactionsData(td)
+Block::Block(std::string& td, std::string& ph)
+: transactionsData(td), prevHash(ph)
 {
 
-    correctHash = calcHash(transactionsData, DIFFICULTY);
+    correctHash = calcHash(this->transactionsData, this->prevHash, DIFFICULTY);
     logS << "Block created successfully!" << std::endl;
     
 }
@@ -256,7 +257,7 @@ Block::Block(std::string& td)
 Block::Block()
 {
 
-    logS << "Block created successfully!" << std::endl;
+    logS << "Empty Block created successfully!" << std::endl;
 
 }
 
@@ -344,11 +345,26 @@ Marketplace::~Marketplace()
 void Blockchain::openCompetition(std::string& leftOut, std::vector<Node*>& nl)
 {
 
-    ++last_index; // first and foremost
+    ++this->current_index; // first and foremost
+    
+    std::string tmp;
+    if (this->current_index == 0) 
+    {
+        tmp = HASH_OF_DEATH;
+    }
 
-    std::unique_ptr<Block> dummyPtr(new Block(tmpTransactionsData));
-    chain.push_back(std::move(dummyPtr));
-	chain.shrink_to_fit(); // shrink the capacity of vector to its true size to avoid wasting memory
+    else 
+    {
+        tmp = this->chain[current_index]->prevHash;
+    }
+    std::unique_ptr<Block> dummyPtr(new Block(this->tmpTransactionsData, tmp));
+
+	// if (chain.size() % 10 == 0) // expand capacity every creation of (multiples of 10)th element
+	// {
+	// 	this->chain.reserve(10 + this->chain.size());
+	// }
+    this->chain.push_back(std::move(dummyPtr));
+
     tmpTransactionsData.clear(); //reset tmpTransactionsData
     tmpTransactionsData += leftOut;
 
@@ -356,7 +372,7 @@ void Blockchain::openCompetition(std::string& leftOut, std::vector<Node*>& nl)
     for (auto& n : nl)
     {
 
-        n->startMining(chain[last_index]->transactionsData);
+        n->startMining(this->chain[current_index]->transactionsData, this->chain[current_index]->prevHash);
         
     }
 
@@ -366,7 +382,7 @@ void Blockchain::openCompetition(std::string& leftOut, std::vector<Node*>& nl)
     while (FINISHED == 0)
     {
         
-        winner = whoisthewinner(chain[last_index]->correctHash);
+        winner = whoisthewinner(chain[current_index]->correctHash);
 
     } 
         
@@ -404,43 +420,51 @@ void Blockchain::syncDatabase(const uint16_t& mode)
 
         std::ifstream filein("./assets/database");
         std::string line;
-        std::string tmp1; // responsible for collecting the hash of the block
-        std::string tmp2; // responsible for collecting the transactions data of the block
+        std::string tmp1; // responsible for collecting the prevHash of the block
+        std::string tmp2; // responsible for collecting the correctHash of the block
+        std::string tmp3; // responsible for collecting the transactions data of the block
         
         while (filein.peek() != EOF)
         {
             
-            ++last_index;
+            ++current_index;
             
             tmp2 = ""; //reset
 
             // create empty block first then fullfill its data later
 
-            // read in the first line, which is the hash of the block
+            // read in the first 2 lines, which are the hash, previous hash of the block, respectively
             std::getline(filein, line);
             tmp1 = line;
-
-            // read in the next 3 lines, which is the transactions datas
             std::getline(filein, line);
-            tmp2 += (line + '\n');
+            tmp2 = line;
+
+            // read in the next 3 lines, which is the transactions datas | the amount of lines to read equals to 3 because 128 bits can store roughly 3 lines of transactions data
+            std::getline(filein, line);
+            tmp3 += (line + '\n');
 
             std::getline(filein, line);
-            tmp2 += (line + '\n');
+            tmp3 += (line + '\n');
 
             std::getline(filein, line);
-            tmp2 += (line + '\n');
+            tmp3 += (line + '\n');
 
             // skip the remaining blank line
             std::getline(filein, line);
 
             // create an empty block
             std::unique_ptr<Block> dummyPtr(new Block());
+			
+			// if (this->chain.size() % 10 == 0) // expand capacity every creation of (multiples of 10)th element
+			// {
+			// 	this->chain.reserve(10 + this->chain.size());
+			// }
             this->chain.push_back(std::move(dummyPtr));
-			chain.shrink_to_fit(); // shrink the capacity of vector to its true size to avoid wasting memory
 
             // fullfill datas of block
-            this->chain[last_index]->correctHash = tmp1;
-            this->chain[last_index]->transactionsData = tmp2;
+            this->chain[current_index]->prevHash = tmp1;
+            this->chain[current_index]->correctHash = tmp2;
+            this->chain[current_index]->transactionsData = tmp3;
 
         }
 
@@ -461,7 +485,7 @@ void Blockchain::syncDatabase(const uint16_t& mode)
             
         }
 
-        fileout << this->chain[last_index]->correctHash << std::endl << this->chain[last_index]->transactionsData << std::endl;
+        fileout << this->chain[current_index]->prevHash << std::endl << this->chain[current_index]->correctHash << std::endl << this->chain[current_index]->transactionsData << std::endl;
         
         fileout.close();
 
@@ -480,6 +504,7 @@ void Blockchain::showAllBlocks()
     {
 
         std::cout << "Block number " << i+1 << ":" << std::endl;
+        std::cout << "\t--> Hash of previous block : " << this->chain[i]->prevHash << std::endl;
         std::cout << "\t--> Hash of block : " << this->chain[i]->correctHash << std::endl;
         std::cout << "\t--> Transactions data :\n" << this->chain[i]->transactionsData << std::endl;
         std::cout << "----------------------------------------------------------------\n";
@@ -627,10 +652,10 @@ void Node::transferTo(Blockchain& blc, std::vector<Node*>& nl, std::string& rece
 
 }
 
-void Node::startMining(std::string& td)
+void Node::startMining(std::string& td, std::string& ph)
 {
     
-    std::thread worker(guessHash, td, this->name, DIFFICULTY, &FINISHED);
+    std::thread worker(guessHash, td, ph, this->name, DIFFICULTY, &FINISHED);
     worker.detach();
 
 }
@@ -663,8 +688,13 @@ void Node::openMyStall(Marketplace& mp, Node*& s, bool& t, double& a)
     }
 
     this->mystall = new Stall(s, t, a);
-    mp.market.push_back(std::move(mystall));
-	mp.market.shrink_to_fit(); // shrink the capacity of vector to its true size to avoid wasting memory
+
+	// if (mp.market.size() % 10 == 0)
+	// {
+	// 	mp.market.reserve(10 + mp.market.size()); // 10 is not the amount of bytes, but the amount of elements
+	// }
+    mp.market.push_back(std::move(this->mystall));
+
     (t == 0) ? s->balance -= a : s->wallet -= a;
     
     std::cout << "\nOpened a lovely stall in the marketplace. Yours is stall number " << mp.market.size() << std::endl;
@@ -880,8 +910,12 @@ int main()
 
         tmpName = "node" + std::to_string(i+1);
         Node* dummyPtr = new Node(tmpName, 0, 0, "NULL");
+
+		// if (nodesList.size() % 10 == 0)
+		// {
+		// 	nodesList.reserve(10 + nodesList.size()); // 10 is not the amount of bytes, but the amount of elements
+		// }
         nodesList.push_back(dummyPtr);
-		nodesList.shrink_to_fit(); // shrink vector's capacity to its true size to avoid wasting memory
 
     }  
     
