@@ -1,7 +1,6 @@
 #include <iostream>
 #include <iomanip>
 #include <string>
-#include <cstring>
 #include <sstream>
 #include <fstream>
 #include <vector>
@@ -236,21 +235,6 @@ void storeOurWallets(std::vector<Node*>& nl)
 }
 
 /* end useful functions */
-
-
-
-/* by creating this struct, we will treat each trade between 2 traders as an <Exchange> object */
-struct Exchange
-{
-
-    Node*& seller;   // both seller and buyer are traders | referrence to pointers as well
-    Node*& buyer;    // ,just to be explicitly clear
-
-    double exchangeThis; // could be bitcoins / money
-    double forThis;      // in exchange of money / bitcoins
-
-}; typedef struct Exchange Exchange;
-/* end struct definition*/
 
 
 
@@ -872,7 +856,6 @@ int main()
     // std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // pause the main thread for 1s to wait for values to be updated;
    
     std::vector<Node*> nodesList; // a vector of <NODE> as a method for the nodes to interact with one another
-    std::vector<Exchange*> market; // a vector of <Exchange*> as a marketplace for nodes who need to trade bitcoins WITHOUT KNOWING WHO THE BUYER / SELLER is yet
     Blockchain mychain;             // a unique | one-and-only <Blockchain> object of the whole program and is the life of it (kind of)
     Marketplace mymarketplace;       // a unique | one-and-only <Marketplace> object of the whole program
 
