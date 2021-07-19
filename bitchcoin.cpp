@@ -243,10 +243,12 @@ void storeOurWallets(std::vector<Node*>& nl)
 
 // constructor
 Block::Block(std::string& td, std::string& ph)
-: transactionsData(td), prevHash(ph)
 {
 
-    correctHash = calcHash(this->transactionsData, this->prevHash, DIFFICULTY);
+    this->transactionsData = td;
+    this->prevHash = ph;
+
+    this->correctHash = calcHash(this->transactionsData, this->prevHash, DIFFICULTY);
     logS << "Block created successfully!" << std::endl;
     
 }
@@ -278,7 +280,8 @@ Blockchain::Blockchain()
 {
     
     syncDatabase(); // read values from database
-            
+    this->chain.reserve(1);
+
     logS << "Blockchain crated successfully!" << std::endl;
 
 }
@@ -344,29 +347,34 @@ Marketplace::~Marketplace()
 //methods
 void Blockchain::openCompetition(std::string& leftOut, std::vector<Node*>& nl)
 {
+    this->current_index++; // first and foremost
 
-    ++this->current_index; // first and foremost
+	if (chain.size() % 10 == 0) // expand capacity every creation of (multiples of 10)th block
+	{
+
+		this->chain.reserve(10 + this->chain.size());
+
+	}
+
+    std::string tmpPrevHash;    
+    if (current_index == 0)
+    {
+        
+        tmpPrevHash = HASH_OF_DEATH;
+
+    }
+
+    else
+    {
+
+        tmpPrevHash = this->chain[current_index-1]->correctHash;
+
+    }
     
-    std::string tmp;
-    if (this->current_index == 0) 
-    {
-        tmp = HASH_OF_DEATH;
-    }
-
-    else 
-    {
-        tmp = this->chain[current_index]->prevHash;
-    }
-    std::unique_ptr<Block> dummyPtr(new Block(this->tmpTransactionsData, tmp));
-
-	// if (chain.size() % 10 == 0) // expand capacity every creation of (multiples of 10)th element
-	// {
-	// 	this->chain.reserve(10 + this->chain.size());
-	// }
+    std::unique_ptr<Block> dummyPtr(new Block(this->tmpTransactionsData, tmpPrevHash));
     this->chain.push_back(std::move(dummyPtr));
-
-    tmpTransactionsData.clear(); //reset tmpTransactionsData
-    tmpTransactionsData += leftOut;
+    this->tmpTransactionsData.clear(); //reset tmpTransactionsData
+    this->tmpTransactionsData += leftOut;
 
     // signal nodes to start competing in order to complete the creation of the newly initialized block
     for (auto& n : nl)
@@ -429,9 +437,7 @@ void Blockchain::syncDatabase(const uint16_t& mode)
             
             ++current_index;
             
-            tmp2 = ""; //reset
-
-            // create empty block first then fullfill its data later
+            tmp3 = ""; //reset
 
             // read in the first 2 lines, which are the hash, previous hash of the block, respectively
             std::getline(filein, line);
@@ -453,7 +459,7 @@ void Blockchain::syncDatabase(const uint16_t& mode)
             std::getline(filein, line);
 
             // create an empty block
-            std::unique_ptr<Block> dummyPtr(new Block());
+            std::unique_ptr<Block> dummyPtr(new Block(tmp1 , tmp3));
 			
 			// if (this->chain.size() % 10 == 0) // expand capacity every creation of (multiples of 10)th element
 			// {
@@ -462,9 +468,9 @@ void Blockchain::syncDatabase(const uint16_t& mode)
             this->chain.push_back(std::move(dummyPtr));
 
             // fullfill datas of block
-            this->chain[current_index]->prevHash = tmp1;
-            this->chain[current_index]->correctHash = tmp2;
-            this->chain[current_index]->transactionsData = tmp3;
+            // this->chain[current_index]->prevHash = tmp1;
+            // this->chain[current_index]->correctHash = tmp2;
+            // this->chain[current_index]->transactionsData = tmp3;
 
         }
 

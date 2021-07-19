@@ -1,11 +1,38 @@
 #include <iostream>
-#include <cstring>
-#include <string>
-#include "coinutils.hpp"
-#include <openssl/sha.h>
+
+class Person
+{
+  public:
+    std::string name;
+    Person(std::string& n)
+    : name(n)
+    {
+        // nothing here
+    }
+    
+};
 
 int main()
 {
-    char tD[1000] = "ducminh ducminh2 19\nducminh2 ducminh 1900000\nducminh1 ducminh3 1900000";
-    std::cout << "Hash = " << calcHash(tD) << std::endl;
+    std::string test;
+    Person* arr[3];
+    int index = 0;
+
+    try
+    {
+        arr[index]->name = arr[index - 1]->name;
+    }
+    catch(const std::exception& e)
+    {
+        goto IF_FAIL;
+    }
+    
+
+    IF_FAIL:
+        arr[index]->name = "ANONYMOUS";
+
+
+    std::cout << arr[index]->name;
+
+    return 0;
 }
