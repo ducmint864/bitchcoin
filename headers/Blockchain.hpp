@@ -1,17 +1,5 @@
-#include <iostream>
-#include <iomanip>
-#include <string>
-#include <cstring>
-#include <sstream>
-#include <fstream>
 #include <vector>
 #include <memory>
-#include <thread>
-#include <chrono>
-#include <ctime>
-#include <cmath>
-#include <cstdlib>
-#include <openssl/sha.h>
 #ifndef Blockchain_H
     #define Blockchain_H
 #endif
@@ -62,7 +50,7 @@ class Blockchain
         ~Blockchain();
 
         // methods
-        void openCompetition(std::string& leftOut, std::vector<Node*>& nl);
+        void openCompetition(std::string& leftOut, std::vector<std::shared_ptr<Node>>& nl);
 
         void syncDatabase(const uint16_t& mode = 0);
 

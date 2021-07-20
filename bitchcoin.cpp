@@ -3,14 +3,14 @@
 #include <string>
 #include <sstream>
 #include <fstream>
-#include <vector>
+#include <algorithm>
 #include <iterator>
+#include <vector>
 #include <memory>
 #include <thread>
 #include <chrono>
 #include <ctime>
 #include <cmath>
-#include <algorithm>
 #include <cstdlib>
 #include <openssl/sha.h>
 #include "./headers/timeutils.hpp"
@@ -81,7 +81,7 @@ std::string whoisthewinner(std::string& correctHash)
 
 /* useful fucntions */
 
-bool whereOurCoinsAt(std::vector<Node*>& nl)
+bool whereOurCoinsAt(std::vector<std::shared_ptr<Node>>& nl)
 {
 
     bool extremelyPoor = 1;
@@ -120,7 +120,7 @@ bool whereOurCoinsAt(std::vector<Node*>& nl)
 
 
 
-void storeOurCoins(std::vector<Node*> nl)
+void storeOurCoins(std::vector<std::shared_ptr<Node>> nl)
 {
 
     std::ofstream outfile("./assets/.tmpYourCoinsAreHere");
@@ -133,7 +133,7 @@ void storeOurCoins(std::vector<Node*> nl)
 
     }
 
-    for (Node* &n : nl)    
+    for (std::shared_ptr<Node> &n : nl)    
     {
 
         outfile << n->balance << std::endl;
@@ -149,7 +149,7 @@ void storeOurCoins(std::vector<Node*> nl)
 
 
 
-void checkCoinBucket(std::vector<Node*>& nl)
+void checkCoinBucket(std::vector<std::shared_ptr<Node>>& nl)
 {
     std::ifstream filein;
     std::string line;
@@ -186,7 +186,7 @@ void checkCoinBucket(std::vector<Node*>& nl)
 
 
 
-void whereOurWalletsAt(std::vector<Node*>& nl)
+void whereOurWalletsAt(std::vector<std::shared_ptr<Node>>& nl)
 {
 
     std::ifstream filein("./assets/yourWalletsAreHere");
@@ -217,7 +217,7 @@ void whereOurWalletsAt(std::vector<Node*>& nl)
 
 
 
-void storeOurWallets(std::vector<Node*>& nl)
+void storeOurWallets(std::vector<std::shared_ptr<Node>>& nl)
 {
 
     std::ofstream fileout("./assets/.tmpYourWalletsAreHere");
@@ -300,7 +300,7 @@ Blockchain::~Blockchain()
 
 
 // constructor
-Stall::Stall(Node* &s, bool& t, double& a)
+Stall::Stall(std::shared_ptr<Node> &s, bool& t, double& a)
 : seller(s), type(t), amount(a)
 {
 
@@ -333,9 +333,6 @@ Marketplace::Marketplace()
 // destructor
 Marketplace::~Marketplace()
 {
-
-    for (const auto& s : market)    
-        delete s;
     
     this->market.clear();
     logS << "Marketplace deleted successfully" << std::endl;
@@ -345,7 +342,7 @@ Marketplace::~Marketplace()
 
 
 //methods
-void Blockchain::openCompetition(std::string& leftOut, std::vector<Node*>& nl)
+void Blockchain::openCompetition(std::string& leftOut, std::vector<std::shared_ptr<Node>>& nl)
 {
     this->current_index++; // first and foremost
 
@@ -371,8 +368,7 @@ void Blockchain::openCompetition(std::string& leftOut, std::vector<Node*>& nl)
 
     }
     
-    std::unique_ptr<Block> dummyPtr(new Block(this->tmpTransactionsData, tmpPrevHash));
-    this->chain.push_back(std::move(dummyPtr));
+    this->chain.push_back(std::make_unique<Block>(this->tmpTransactionsData, tmpPrevHash));
     this->tmpTransactionsData.clear(); //reset tmpTransactionsData
     this->tmpTransactionsData += leftOut;
 
@@ -458,8 +454,8 @@ void Blockchain::syncDatabase(const uint16_t& mode)
             // skip the remaining blank line
             std::getline(filein, line);
 
-            // create an empty block
-            std::unique_ptr<Block> dummyPtr(new Block(tmp1 , tmp3));
+            // add block to blockchain
+            std::unique_ptr<Block> dummyPtr(std::make_unique<Block>(tmp1 , tmp3));
 			
 			// if (this->chain.size() % 10 == 0) // expand capacity every creation of (multiples of 10)th element
 			// {
@@ -542,7 +538,7 @@ Node::~Node()
 
 
 
-void Node::transferTo(Blockchain& blc, std::vector<Node*>& nl, std::string& receiver, const uint32_t& timestamp)
+void Node::transferTo(Blockchain& blc, std::vector<std::shared_ptr<Node>>& nl, std::string& receiver, const uint32_t& timestamp)
 {
     
     // initial checking step
@@ -668,7 +664,7 @@ void Node::startMining(std::string& td, std::string& ph)
 
 
 
-void Node::withdraw(float& amount, std::vector<Node*>& nl)
+void Node::withdraw(float& amount, std::vector<std::shared_ptr<Node>>& nl)
 {
 
     // withdraw money into node's wallet
@@ -681,7 +677,7 @@ void Node::withdraw(float& amount, std::vector<Node*>& nl)
 
 
 
-void Node::openMyStall(Marketplace& mp, Node*& s, bool& t, double& a)
+void Node::openMyStall(Marketplace& mp, std::shared_ptr<Node>& s, bool& t, double& a)
 {
     
     // each node can only open at most one stall at a time
@@ -693,7 +689,7 @@ void Node::openMyStall(Marketplace& mp, Node*& s, bool& t, double& a)
         
     }
 
-    this->mystall = new Stall(s, t, a);
+    this->mystall = std::make_shared<Stall>(s, t, a);
 
 	// if (mp.market.size() % 10 == 0)
 	// {
@@ -722,13 +718,15 @@ void Node::closeMyStall(Marketplace& mp)
     }
 
     // using lambda function with std::find_if() to find position of this node's stall in the market
-    std::vector<Stall*>::iterator iter = std::find_if(mp.market.begin(), mp.market.end(), 
-    [this](const Stall* s) { return (s->seller->name == this->name); }
+    std::vector<std::shared_ptr<Stall>>::iterator iter = std::find_if(mp.market.begin(), mp.market.end(),
+
+    [this](const std::shared_ptr<Stall> s) { return (s->seller->name == this->name); }
+
     );
 
     // delete stall's data from memory
     auto index = (iter - mp.market.begin()); // get index of found stall in market
-    delete mp.market[index];
+    mp.market[index].reset(); // delete from memory the stall which is pointed to by a shared_pointer
     mp.market[index] = nullptr;
 
     // delete stall from market
@@ -742,7 +740,7 @@ void Node::closeMyStall(Marketplace& mp)
 
 
 // visit to view stall, negotiate, make offers, and perform trades, or perhaps just leave the stall
-void Node::visitStall(Blockchain& blc, std::vector<Node*>& nl, Marketplace& mp, uint64_t& stallNum)
+void Node::visitStall(Blockchain& blc, std::vector<std::shared_ptr<Node>>& nl, Marketplace& mp, uint64_t& stallNum)
 {
 
     // initial checking to see if stall exist
@@ -869,7 +867,7 @@ void Marketplace::showAllStalls()
     std::string tmp;
     
     std::cout << "----------------------------------------------------------------\n";
-    for (Stall*& s : market)
+    for (const auto& s : market)
     {
 
         std::cout << "stall number " << i + 1 << " : " << std::endl;
@@ -894,7 +892,7 @@ int main()
 {
     // std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // pause the main thread for 1s to wait for values to be updated;
    
-    std::vector<Node*> nodesList; // a vector of <NODE> as a method for the nodes to interact with one another
+    std::vector<std::shared_ptr<Node>> nodesList; // a vector of <NODE> as a method for the nodes to interact with one another
     Blockchain mychain;             // a unique | one-and-only <Blockchain> object of the whole program and is the life of it (kind of)
     Marketplace mymarketplace;       // a unique | one-and-only <Marketplace> object of the whole program
 
@@ -915,7 +913,7 @@ int main()
     {
 
         tmpName = "node" + std::to_string(i+1);
-        Node* dummyPtr = new Node(tmpName, 0, 0, "NULL");
+        std::shared_ptr<Node> dummyPtr = std::make_shared<Node>(tmpName, 0, 0, "NULL");
 
 		// if (nodesList.size() % 10 == 0)
 		// {
@@ -930,7 +928,7 @@ int main()
     whereOurWalletsAt(nodesList);
 
     // pick a random node for the player
-    Node* whoami = nodesList[random2(0, NODE_COUNT - 1)];
+    std::shared_ptr<Node> whoami = nodesList[random2(0, NODE_COUNT - 1)];
     // whoami->balance = 100; // give player 100 bitcons to start transferring
 
     std::cout << "You are now controlling " << whoami->name << " | You can change if you wish to\nPress enter to continue to program...";
@@ -1100,14 +1098,9 @@ int main()
     }
 
     // memory cleaning
-    for (Node* &node : nodesList)
-    {
+    nodesList.clear();
 
-        delete node;
-
-    } nodesList.clear();
-
-    // kill nodejs fetcher
+    // stopping the fetcher
     FINISHED = 1;
     subsystem.join();
 
