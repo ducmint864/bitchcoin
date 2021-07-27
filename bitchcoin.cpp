@@ -1,5 +1,4 @@
 #include <iostream>
-#include <iomanip>
 #include <string>
 #include <sstream>
 #include <fstream>
@@ -9,9 +8,6 @@
 #include <memory>
 #include <thread>
 #include <chrono>
-#include <ctime>
-#include <cmath>
-#include <cstdlib>
 #include <openssl/sha.h>
 #include "./headers/timeutils.hpp"
 #include "./headers/coinutils.hpp"
