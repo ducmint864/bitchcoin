@@ -23,7 +23,7 @@ uint16_t random2(const uint16_t &min, const uint16_t &max) //range : [min, max]
 }
 
 
-void update(float* f, float* v, float* bv, float* sv, const bool* b) 
+void update(float* ar_FEE, float* ar_VALUE, float* ar_BUY_VALUE, float* ar_SELL_VALUE, const bool* ar_FINISHED) 
 {
 
     system("kitty node assets/index.js &");
@@ -31,12 +31,12 @@ void update(float* f, float* v, float* bv, float* sv, const bool* b)
     std::ifstream filein;
     std::string line, currency;
     uint16_t count = 0, tmp;
-    bool firtTime = 1;
+    bool firstTime = 1;
 
-    while (*b == 0)
+    while (*ar_FINISHED == 0)
     {
 
-        if (firtTime != 1)
+        if (firstTime != 1)
         {
 
             // check if fetcher is still working properly, if fetcherState has code 0, then the fetcher is down
@@ -53,7 +53,7 @@ void update(float* f, float* v, float* bv, float* sv, const bool* b)
             if (tmp == 0)
             {
 
-                while (*b == 0 && count < 35000)
+                while (*ar_FINISHED == 0 && count < 35000)
                 {
 
                     std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -63,7 +63,7 @@ void update(float* f, float* v, float* bv, float* sv, const bool* b)
 
             }
 
-            firtTime = 0;
+            firstTime = 0;
             
         }
         
@@ -77,7 +77,7 @@ void update(float* f, float* v, float* bv, float* sv, const bool* b)
 
         }
 
-        filein >> *f;
+        filein >> *ar_FEE;
         filein.close();
 
         // fetch and update V
@@ -90,9 +90,9 @@ void update(float* f, float* v, float* bv, float* sv, const bool* b)
             if (currency == "USD")
             {
                 
-                ss >> *bv;
-                ss >> *sv;
-                *v = (*bv + *sv) / 2;
+                ss >> *ar_BUY_VALUE;
+                ss >> *ar_SELL_VALUE;
+                *ar_VALUE = (*ar_BUY_VALUE + *ar_SELL_VALUE) / 2;
 
             }
 
@@ -100,7 +100,7 @@ void update(float* f, float* v, float* bv, float* sv, const bool* b)
         }
 
         count = 0;
-        while (*b == 0 && count < 35000)
+        while (*ar_FINISHED == 0 && count < 35000)
         {
 
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -117,17 +117,17 @@ void update(float* f, float* v, float* bv, float* sv, const bool* b)
 
 
 
-std::string calcHash(std::string& td, std::string& ph, const uint16_t& difficulty = 1, const std::string& mode = "sha256")
+std::string calcHash(std::string& ar_transactionsData, std::string& ar_prevHash, const uint16_t& ar_DIFFICULTY = 1, const std::string& ar_mode = "sha256")
 {
 
     std::ostringstream ss;
-    uint16_t prefixCharCount = random2(difficulty, pow(difficulty, 2));
+    uint16_t prefixCharCount = random2(ar_DIFFICULTY, pow(ar_DIFFICULTY, 2));
 
-    if (mode == "sha256")
+    if (ar_mode == "sha256")
     {
 
         std::string prefix(prefixCharCount, ('0' + random(0, 9)) );
-        prefix += (td + ph);
+        prefix += (ar_transactionsData + ar_prevHash);
         unsigned char hash[SHA256_DIGEST_LENGTH];
         SHA256_CTX sha256;
         SHA256_Init(&sha256);
@@ -147,7 +147,7 @@ std::string calcHash(std::string& td, std::string& ph, const uint16_t& difficult
     else 
     {
 
-        std::cout << "Invalid mode : " << mode;
+        std::cout << "Invalid mode : " << ar_mode;
 
     }
 
@@ -156,16 +156,16 @@ std::string calcHash(std::string& td, std::string& ph, const uint16_t& difficult
 }
 
 
-void guessHash(std::string td, std::string ph, std::string name, const uint16_t difficulty, bool* finished)
+void guessHash(std::string ar_transactionsData, std::string ar_prevHash, std::string ar_name, const uint16_t ar_DIFFICULTY, bool* ar_FINISHED)
 {
     
     std::ofstream fileout("./assets/arena");
     std::string res;
 
-    while (*finished == 0)
+    while (*ar_FINISHED == 0)
     {
 
-        fileout << calcHash(td, ph, difficulty) << ' ' << name << std::endl;
+        fileout << calcHash(ar_transactionsData, ar_prevHash, ar_DIFFICULTY) << ' ' << ar_name << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // lower interval for the judge to read correctly
 
     }
