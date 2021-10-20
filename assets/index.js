@@ -62,11 +62,11 @@ function fetch()
             console.log("REQUEST TO '", valuesUrl, "' SUCCESS!\n")
 
             // clear files everytime
-            fs.truncate("./assets/values", 0, (err) => {
-                if (err) {
-                    console.log("ERROR! CAN'T CLEAR FILE!");
-                }
-            })
+            // fs.truncate("./assets/values", 0, (err) => {
+            //     if (err) {
+            //         console.log("ERROR! CAN'T CLEAR FILE!");
+            //     }
+            // })
 
         }
     })
