@@ -1,5 +1,2 @@
 assets/node_modules/*
-./arena
-./.log
-./database
-./yourCoinsAreHere
+assets/arena
