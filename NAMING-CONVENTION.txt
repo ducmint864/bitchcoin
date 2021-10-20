@@ -1,9 +1,0 @@
-Variables naming convention
-
-Utilizing prefixes to avoid name conflictions
-
-SCOPE*         TYPE*   
-member   m     pointer   p                       
-argument a     reference r                     
-local    l     constant  c                                    
-global   g                                    

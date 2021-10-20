@@ -2,14 +2,12 @@ const request = require("request");
 const fs = require("fs");
 const cheerio = require('cheerio')
 const { setFlagsFromString } = require("v8");
-const prompt = require('prompt-sync')({sigint : true});
 const events = require('events')
 const eventEmitter = new events.EventEmitter()
 // console.log = function() {} // hide all console output
 // console.clear = function() {} //
 
 // console.log('\nChoose fetching interval [milisecs] | *RECOMMENDED : 30000\n')
-// const milisecs = prompt(">>> ");
 const milisecs = 30000;
 
 
@@ -70,23 +68,6 @@ function fetch()
                 }
             })
 
-            // parse the raw strings into json type in javascript
-            let jsonObj = JSON.parse(body);
-
-            // loop through keys of json objects
-            Object.keys(jsonObj).forEach( (key) => {
-                let buyValue = parseInt(jsonObj[key].buy, 10);
-                let sellValue = parseInt(jsonObj[key].sell, 10);
-
-                fs.appendFile("./assets/values", (key.toString() + ' ' + buyValue.toString() + ' ' + sellValue.toString() + '\n'), (err) => {
-                    if (err) {
-                        console.log("ERROR! CAN'T WRITE VALUES TO FILE! DO YOU HAVE THE RIGHT PERMISSION?"); 
-                    }
-                })
-            })
-
-            console.log('*WRITE VALUES TO FILE SUCCESS!\n')
-            eventEmitter.emit('finished')
         }
     })
     //
@@ -112,7 +93,7 @@ function fetch()
         else if (!err) {
             console.log("REQUEST TO '", feeUrl, "' SUCCESS!\n")
             const $ = cheerio.load(body);
-            let fee = $('td[class=text-right]').html().replaceAll(' ', '').replaceAll('\n', '')
+            let fee = $('td[class=text-right]').html().replace(/\s/g,'').replace(/(\r\n|\n|\r)/gm, "") // remove white spaces and line breaks
             fs.writeFile('./assets/fee', fee, (err) => {
                 if (err) {
                     console.log("ERROR! CAN'T WRITE FEE TO FILE! DO YOU HAVE THE RIGHT PERMISSION?\n") 
