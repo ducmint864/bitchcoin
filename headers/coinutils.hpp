@@ -26,7 +26,7 @@ uint16_t random2(const uint16_t &min, const uint16_t &max) //range : [min, max]
 void update(float* ar_FEE, float* ar_VALUE, float* ar_BUY_VALUE, float* ar_SELL_VALUE, const bool* ar_FINISHED) 
 {
 
-    system("kitty node assets/index.js &");
+    system("powershell node assets/index.js &");
 
     std::ifstream filein;
     std::string line, currency;
@@ -110,7 +110,7 @@ void update(float* ar_FEE, float* ar_VALUE, float* ar_BUY_VALUE, float* ar_SELL_
 
     }
 
-    system("killall -q node"); // kill nodejs fetcher
+    system("powershell Stop-Process -Name Node"); // kill nodejs fetcher
     filein.close();
 
 }
