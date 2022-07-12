@@ -30,7 +30,7 @@ function sleep(ms) {
 function finishedHandler() {
     ++finishedCount;
     if (finishedCount == 2) {
-        console.log('\nFETCH CHING AGAIN IN ', milisecs / 1000, '[secs]\n');
+        console.log('\nFetching again in', milisecs / 1000, '[secs]\n');
         finishedCount = 0;
     }
 }
@@ -44,16 +44,7 @@ function fetch()
 // fetch bitcoin values
     request(valuesUrl, (err, response, body) => {
         if (err) {
-            fs.truncate("./assets/fetcherState", 0, (err) => {});
-
             console.log("REQUEST TO '", valuesUrl, "' FATALLY FAILED!\n");
-            fs.appendFile("./assets/fetcherState", "0", (err) => {
-                if (err)
-                {
-                    console.log("Goddamn it!\n");
-                    // return;
-                }
-            })
 
             eventEmitter.emit('finished');
             return;
@@ -94,17 +85,7 @@ function fetch()
 // fetch bitcon transaction fee
     request(feeUrl, (err, response, body) => {
         if (err) {
-            fs.truncate("./assets/fetcherState", 0, (err)=> {});
-            
             console.log("REQUEST TO '", feeUrl, "' FATALLY FAILED!\n")
-            fs.appendFile("./assets/fetcherState", "0", (err) => {
-                if (err)
-                {
-                    console.log("Goddamn it!\n");
-                    // return;
-                }
-            })
-
             eventEmitter.emit('finished');
             return;
         }
@@ -112,7 +93,7 @@ function fetch()
         else if (!err) {
             console.log("REQUEST TO '", feeUrl, "' SUCCESS!\n")
             const $ = cheerio.load(body);
-            let fee = $('td[class=text-right]').html().replaceAll(' ', '').replaceAll('\n', '')
+            let fee = $('td[class=text-right]').html().trim()
             fs.writeFile('./assets/fee', fee, (err) => {
                 if (err) {
                     console.log("ERROR! CAN'T WRITE FEE TO FILE! DO YOU HAVE THE RIGHT PERMISSION?\n") 
