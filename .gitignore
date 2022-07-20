@@ -1,4 +1,6 @@
 assets/node_modules/*
+assets/values
+assets/fee
 ./arena
 ./.log
 ./database
