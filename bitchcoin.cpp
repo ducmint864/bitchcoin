@@ -30,7 +30,7 @@ const std::string      gc_HASH_OF_DEATH                      = "0000000000000000
      
     /* non-constants */ 
 bool                   g_FINISHED                            = 0;
-float                  g_TRANSACTION_FEE;
+float                  g_TRANSACTION_FEE;   
 float                  g_VALUE;
 float                  g_BUY_VALUE;
 float                  g_SELL_VALUE;
@@ -74,7 +74,7 @@ std::string whoisthewinner(std::string& ar_correctHash)
 
 
 
-/* useful fucntions */
+/* useful functions */
 
 void clrscr()
 {
