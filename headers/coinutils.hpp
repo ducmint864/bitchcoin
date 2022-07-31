@@ -117,17 +117,18 @@ void update(float* ar_FEE, float* ar_VALUE, float* ar_BUY_VALUE, float* ar_SELL_
 
 
 
-std::string calcHash(std::string& ar_transactionsData, std::string& ar_prevHash, const uint16_t& ar_DIFFICULTY = 1, const std::string& ar_mode = "sha256")
+std::string calcHash(std::string& ar_transactionsData, std::string& ar_prevHash, const uint16_t& ar_DIFFICULTY = 50000, const std::string& ar_mode = "sha256")
 {
 
     std::ostringstream ss;
-    uint16_t prefixCharCount = random2(ar_DIFFICULTY, pow(ar_DIFFICULTY, 2));
+    // uint16_t prefixCharCount = random2(ar_DIFFICULTY, pow(ar_DIFFICULTY, 2));
+    uint16_t prefixCharCount = (ar_DIFFICULTY*random2(ar_DIFFICULTY,pow(ar_DIFFICULTY, 2)));
+    std::string prefix(prefixCharCount, ('0' + random(0, 9)) );
+    prefix += (ar_transactionsData + ar_prevHash);
 
     if (ar_mode == "sha256")
     {
 
-        std::string prefix(prefixCharCount, ('0' + random(0, 9)) );
-        prefix += (ar_transactionsData + ar_prevHash);
         unsigned char hash[SHA256_DIGEST_LENGTH];
         SHA256_CTX sha256;
         SHA256_Init(&sha256);
@@ -136,6 +137,24 @@ std::string calcHash(std::string& ar_transactionsData, std::string& ar_prevHash,
 
         
         for (uint16_t i = 0; i < SHA256_DIGEST_LENGTH; i++)
+        {
+
+            ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
+
+        }
+
+    }
+
+    else if (ar_mode == "sha512")
+    {        
+        unsigned char hash[SHA512_DIGEST_LENGTH];
+        SHA512_CTX sha512;
+        SHA512_Init(&sha512);
+        SHA512_Update(&sha512, prefix.c_str(), prefix.length());
+        SHA512_Final(hash, &sha512);
+
+        
+        for (uint16_t i = 0; i < SHA512_DIGEST_LENGTH; i++)
         {
 
             ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
@@ -165,7 +184,7 @@ void guessHash(std::string ar_transactionsData, std::string ar_prevHash, std::st
     while (*ar_FINISHED == 0)
     {
 
-        fileout << calcHash(ar_transactionsData, ar_prevHash, ar_DIFFICULTY) << ' ' << ar_name << std::endl;
+        fileout << calcHash(ar_transactionsData, ar_prevHash, ar_DIFFICULTY, "sha512") << ' ' << ar_name << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // lower interval for the judge to read correctly
 
     }

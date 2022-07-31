@@ -248,7 +248,7 @@ Block::Block(std::string& ar_transactionsData, std::string& ar_prevHash)
     m_transactionsData = ar_transactionsData;
     m_prevHash = ar_prevHash;
 
-    m_correctHash = calcHash(m_transactionsData, m_prevHash, gc_DIFFICULTY);
+    m_correctHash = calcHash(m_transactionsData, m_prevHash, gc_DIFFICULTY, "sha512");
     logS << "Block created successfully!" << std::endl;
     
 }
