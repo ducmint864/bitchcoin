@@ -67,7 +67,7 @@ void update(float* ar_FEE, float* ar_VALUE, float* ar_BUY_VALUE, float* ar_SELL_
             
         }
         
-        // fetch and update F
+        // fetch and update fees
         filein.open("assets/fee");
         if (!filein.is_open())
         {
@@ -80,7 +80,7 @@ void update(float* ar_FEE, float* ar_VALUE, float* ar_BUY_VALUE, float* ar_SELL_
         filein >> *ar_FEE;
         filein.close();
 
-        // fetch and update V
+        // fetch and update values
         filein.open("assets/values");
         while (std::getline(filein, line))
         {

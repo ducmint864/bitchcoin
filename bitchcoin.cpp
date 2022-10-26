@@ -23,10 +23,10 @@
 const uint16_t         gc_NODE_COUNT                         = 15;
 const uint16_t         gc_DIFFICULTY                         = 1000;
 const uint16_t         gc_INITIAL_AMOUNT                     = gc_NODE_COUNT;
-const uint16_t         gc_MAX_TRANSACTION_DATA_SIZE_IN_BYTES = 128;
+const uint16_t         gc_MAX_TRANSACTION_DATA_SIZE_IN_BYTES = 256;
 const uint32_t         gc_TOTAL                              = 21000000;
 const float            gc_REWARD                             = 6.25;
-const std::string      gc_HASH_OF_DEATH                      = "0000000000000000000000000000000000000000000000000000000000000000";
+const std::string      gc_VOID_HASH                      = "0000000000000000000000000000000000000000000000000000000000000000";
      
     /* non-constants */ 
 bool                   g_FINISHED                            = 0;
@@ -248,7 +248,7 @@ Block::Block(std::string& ar_transactionsData, std::string& ar_prevHash)
     m_transactionsData = ar_transactionsData;
     m_prevHash = ar_prevHash;
 
-    m_correctHash = calcHash(m_transactionsData, m_prevHash, gc_DIFFICULTY);
+    m_correctHash = calcHash(m_transactionsData, m_prevHash, gc_DIFFICULTY); // generate hash of block based on merkle tree structure
     logS << "Block created successfully!" << std::endl;
     
 }
@@ -357,7 +357,7 @@ void Blockchain::openCompetition(std::string& ar_leftOut, std::vector<std::share
     if (m_currentIndex == 0)
     {
         
-        tmpPrevHash = gc_HASH_OF_DEATH;
+        tmpPrevHash = gc_VOID_HASH;
 
     }
 
